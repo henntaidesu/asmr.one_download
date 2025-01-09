@@ -7,39 +7,83 @@ from src.module.read_conf import ReadConf
 
 speed_limit, download_path = ReadConf().get_download_conf()
 
+
 def get_asmr_downlist_api(rj_number):
     url = f"https://api.asmr-200.com/api/tracks/{re.search(r"\d+", rj_number).group()}?v=1"
     req = requests.get(url).json()
-
     results = []
-    for folder in req:
-        folder_title = folder["title"]
-        for child in folder["children"]:
-            audio_info = {
-                "folder_type": folder_title,
-                "title": child["title"],
-                "work_id": child["work"]["id"],
-                "source_id": child["work"]["source_id"],
-                "media_download_url": child["mediaDownloadUrl"],
-                # "duration": child["duration"],
-                "size": child["size"],
-            }
-            results.append(audio_info)
+
+    for FILE_L0 in req:
+        # print(file)
+        FILE_L1_TYPE = FILE_L0['type']
+        FOLDER_L1_TITLE = FILE_L0["title"]
+        try:
+            for FILE_L1 in FILE_L0["children"]:
+                print(FILE_L1)
+                try:
+                    audio_info = {"file_type": FILE_L1_TYPE,
+                                  "folder_title": FOLDER_L1_TITLE,
+                                  "title": FILE_L1["title"],
+                                  "media_download_url": FILE_L1["mediaStreamUrl"],
+                                  "download_path": f"{download_path}/{rj_number}/{FILE_L1['title']}"}
+
+                    results.append(audio_info)
+                except KeyError:
+                    try:
+                        if FILE_L1["children"]:
+                            FILE_L2_TYPE = FILE_L1['type']
+                            FOLDER_L2_TITLE = FILE_L1["title"]
+                            for FILE_L2 in FILE_L1["children"]:
+                                audio_info = {"file_type": FILE_L1_TYPE,
+                                              "folder_title": FOLDER_L1_TITLE,
+                                              "title": FILE_L2["title"],
+                                              "media_download_url": FILE_L2["mediaStreamUrl"],
+                                              "download_path": f"{download_path}/{rj_number}/{FOLDER_L1_TITLE}/{FILE_L2['title']}"}
+                                results.append(audio_info)
+                    except KeyError:
+                        try:
+                            if FILE_L2["children"]:
+                                FILE_L3_TYPE = FILE_L2['type']
+                                FOLDER_L3_TITLE = FILE_L2["title"]
+                                for FILE_L3 in FILE_L2["children"]:
+                                    audio_info = {
+                                        "file_type": FILE_L1_TYPE,
+                                        "folder_title": FOLDER_L1_TITLE,
+                                        "title": FILE_L3["title"],
+                                        "media_download_url": FILE_L3["mediaStreamUrl"],
+                                        "download_path": f"{download_path}/{rj_number}/{FOLDER_L1_TITLE}/{FOLDER_L2_TITLE}/{FILE_L3['title']}"
+                                    }
+                                    results.append(audio_info)
+                        except KeyError:
+                            break
+        except KeyError:
+            break
+
+    for FILE_ROOT in req:
+        if FILE_ROOT['type'] == 'folder':
+            continue
+        audio_info = {
+            "file_type": FILE_ROOT['type'],
+            "folder_title": None,
+            "title": FILE_ROOT['title'],
+            "media_download_url": FILE_ROOT['mediaDownloadUrl'],
+            "download_path": f"{download_path}/{rj_number}/{FILE_ROOT['title']}"
+        }
+        results.append(audio_info)
+
     down_flag = 1
     for item in results:
         print(f'正在下载第 ({down_flag} / {len(results)}) 个文件')
-        print(f"文件夹类型: {item['folder_type']}")
+        print(f"文件类型： {item['file_type']}")
         print(f"文件标题: {item['title']}")
-        print(f"工作 ID: {item['work_id']}")
-        print(f"来源 ID: {item['source_id']}")
         print(f"下载链接: {item['media_download_url']}")
-        # print(f"时长: {item['duration']} 秒")
-        print(f"文件大小: {item['size']} 字节")
+        print(f"下载路径: {item['download_path']}")
         print("-" * 40)
-        os.makedirs(f"{download_path}/{rj_number}/{item['folder_type']}", exist_ok=True)
-        time.sleep(1)
-        down_file(item['media_download_url'], f"{download_path}/{rj_number}/{item['folder_type']}/{item['title']}")
-        down_flag += 1
+
+        # os.makedirs(f"{download_path}/{rj_number}/{item['folder_type']}", exist_ok=True)
+        # time.sleep(1)
+        # down_file(item['media_download_url'], f"{download_path}/{rj_number}/{item['folder_type']}/{item['title']}")
+        # down_flag += 1
 
 def down_file(url, file_name):
     download_speed_limit = 7 * 1024 * 1024  # 5 MB/s
