@@ -8,7 +8,7 @@ from src.module.read_conf import ReadConf
 speed_limit, download_path = ReadConf().get_download_conf()
 
 
-def down_file(url, file_name, download_speed_limit=7 * 1024 * 1024):
+def down_file(url, file_name, speed_limit):
     try:
         # 获取文件总大小
         response = requests.head(url)
