@@ -34,3 +34,13 @@ class ReadConf:
             return True
         else:
             return False
+
+    def get_download_conf(self):
+        speed_limit = float(self.config.get('down_conf', 'speed_limit'))
+        download_path = self.config.get('down_conf', 'download_path')
+        if download_path[1:] == '\\' or download_path[1:] == '/':
+            download_path = download_path[:-1]
+        if '\\' in download_path:
+            download_path = download_path.replace('\\', '/')
+        return speed_limit, download_path
+
