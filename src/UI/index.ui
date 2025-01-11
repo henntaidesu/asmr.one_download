@@ -6,52 +6,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>750</width>
-    <height>500</height>
+    <width>404</width>
+    <height>191</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Anime_sharing_download</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLineEdit" name="keyword">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>10</y>
-      <width>281</width>
-      <height>30</height>
-     </rect>
-    </property>
-    <property name="frame">
-     <bool>true</bool>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignmentFlag::AlignCenter</set>
-    </property>
-    <property name="placeholderText">
-     <string>keyword</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="add_queue">
-    <property name="geometry">
-     <rect>
-      <x>320</x>
-      <y>10</y>
-      <width>101</width>
-      <height>30</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>ADD_queue</string>
-    </property>
-   </widget>
    <widget class="QLineEdit" name="down_path">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>50</y>
-      <width>321</width>
+      <x>80</x>
+      <y>10</y>
+      <width>221</width>
       <height>30</height>
      </rect>
     </property>
@@ -65,10 +33,10 @@
      <string>Download_PATH</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="down_path_save">
+   <widget class="QPushButton" name="user_conf_save">
     <property name="geometry">
      <rect>
-      <x>360</x>
+      <x>310</x>
       <y>50</y>
       <width>61</width>
       <height>30</height>
@@ -78,21 +46,100 @@
      <string>save</string>
     </property>
    </widget>
-   <!-- QTextEdit for CLI Output -->
-   <widget class="QTextEdit" name="cli_output">
+   <widget class="QLineEdit" name="user_name">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>100</y>
-      <width>681</width>
-      <height>300</height>
+      <x>10</x>
+      <y>50</y>
+      <width>141</width>
+      <height>30</height>
      </rect>
     </property>
-    <property name="readOnly">
+    <property name="frame">
      <bool>true</bool>
     </property>
+    <property name="alignment">
+     <set>Qt::AlignmentFlag::AlignCenter</set>
+    </property>
     <property name="placeholderText">
-     <string>CLI Output</string>
+     <string>user_name</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="password">
+    <property name="geometry">
+     <rect>
+      <x>160</x>
+      <y>50</y>
+      <width>141</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="frame">
+     <bool>true</bool>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignmentFlag::AlignCenter</set>
+    </property>
+    <property name="placeholderText">
+     <string>password</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="path_conf_save">
+    <property name="geometry">
+     <rect>
+      <x>310</x>
+      <y>10</y>
+      <width>61</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>save</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="speed_limit">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>61</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="frame">
+     <bool>true</bool>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignmentFlag::AlignCenter</set>
+    </property>
+    <property name="placeholderText">
+     <string>speed</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>100</y>
+      <width>81</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>start down</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_2">
+    <property name="geometry">
+     <rect>
+      <x>290</x>
+      <y>100</y>
+      <width>81</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>stop down</string>
     </property>
    </widget>
   </widget>
@@ -101,7 +148,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>750</width>
+     <width>404</width>
      <height>20</height>
     </rect>
    </property>
