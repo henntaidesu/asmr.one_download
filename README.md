@@ -10,7 +10,7 @@
 
 ![DLsite_WEB](imge/UI.png)
 
- speed : 下载限速 默认100MB/S 
+ speed : 下载限速 默认100MB/S  单位MB/S 在下载中修改限速选项需要下载玩当前文件后生效
 
 Download_PATH: 下载路径
 
