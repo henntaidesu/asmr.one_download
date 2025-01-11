@@ -135,6 +135,11 @@ class INDEX(QMainWindow):
         self.checkbox_VTT.setChecked(self.selected_formats["VTT"])
         self.checkbox_VTT.toggled.connect(self.update_checkbox_VTT)
 
+        self.checkbox_VTT = QCheckBox("LRC", self.centralwidget)
+        self.checkbox_VTT.setGeometry(QtCore.QRect(190, 150, 60, 30))
+        self.checkbox_VTT.setChecked(self.selected_formats["LRC"])
+        self.checkbox_VTT.toggled.connect(self.update_checkbox_LCR)
+
         # 创建按钮
         self.user_conf_save_button = QPushButton("save", self.centralwidget)
         self.user_conf_save_button.setGeometry(QtCore.QRect(310, 50, 60, 30))
@@ -195,6 +200,11 @@ class INDEX(QMainWindow):
             self.conf.write_downfile_type_MP3('VTT', 'false')
         else:
             self.conf.write_downfile_type_MP3('VTT', 'true')
+    def update_checkbox_LCR(self):
+        if self.selected_formats['LRC']:
+            self.conf.write_downfile_type_MP3('LRC', 'false')
+        else:
+            self.conf.write_downfile_type_MP3('LRC', 'true')
 
 
     def on_combo_changed(self, text):
