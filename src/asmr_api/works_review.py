@@ -16,4 +16,4 @@ def review(work_id):
         'work_id': work_id,
     }
 
-    requests.post(url, headers=headers, data=data)
+    requests.put(url, headers=headers, data=data)
