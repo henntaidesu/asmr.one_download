@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QLineEdit, Q
 from PyQt6.uic import loadUi
 from src.asmr_api.get_asmr_works import get_asmr_downlist_api
 from src.read_conf import ReadConf
-from src.UI.creat_ui_file import creat_ui_file
+from PyQt6 import QtCore, QtWidgets
 
 
 class DownloadThread(QThread):
@@ -33,29 +33,52 @@ class INDEX(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        if not os.path.exists('src/UI/index.ui'):
-            creat_ui_file()
+        # 创建界面组件
+        self.setWindowTitle("Anime_sharing_download")
+        self.setGeometry(100, 100, 404, 191)
 
-        loadUi('src/UI/index.ui', self)  # 加载.ui文件
+        self.centralwidget = QtWidgets.QWidget(self)
+        self.setCentralWidget(self.centralwidget)
 
-        # 连接信号到方法
-        self.down_start_button = self.findChild(QPushButton, 'pushButton')
-        self.down_start_button.clicked.connect(self.down_start)
+        # 创建并配置 QLineEdit
+        self.down_path = QLineEdit(self.centralwidget)
+        self.down_path.setGeometry(QtCore.QRect(80, 10, 221, 30))
+        self.down_path.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.down_path.setPlaceholderText("Download_PATH")
 
-        self.down_stop_button = self.findChild(QPushButton, 'pushButton_2')
-        self.down_stop_button.clicked.connect(self.down_start)
+        self.user_name = QLineEdit(self.centralwidget)
+        self.user_name.setGeometry(QtCore.QRect(10, 50, 141, 30))
+        self.user_name.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.user_name.setPlaceholderText("user_name")
 
-        self.path_conf_save_button = self.findChild(QPushButton, 'path_conf_save')
-        self.path_conf_save_button.clicked.connect(self.save_download_path)
+        self.password = QLineEdit(self.centralwidget)
+        self.password.setGeometry(QtCore.QRect(160, 50, 141, 30))
+        self.password.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.password.setPlaceholderText("password")
 
-        self.user_conf_save_button = self.findChild(QPushButton, 'user_conf_save')
+        self.speed_limit = QLineEdit(self.centralwidget)
+        self.speed_limit.setGeometry(QtCore.QRect(10, 10, 61, 30))
+        self.speed_limit.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.speed_limit.setPlaceholderText("speed")
+
+        # 创建按钮
+        self.user_conf_save_button = QPushButton("save", self.centralwidget)
+        self.user_conf_save_button.setGeometry(QtCore.QRect(310, 50, 61, 30))
         self.user_conf_save_button.clicked.connect(self.save_user)
 
-        self.download_path_QLineEdit = self.findChild(QLineEdit, 'down_path')
-        self.speed_limit_QLineEdit = self.findChild(QLineEdit, 'speed_limit')
-        self.user_name_QlineEdit = self.findChild(QLineEdit, 'user_name')
-        self.user_password_QlineEdit = self.findChild(QLineEdit, 'password')
+        self.path_conf_save_button = QPushButton("save", self.centralwidget)
+        self.path_conf_save_button.setGeometry(QtCore.QRect(310, 10, 61, 30))
+        self.path_conf_save_button.clicked.connect(self.save_download_path)
 
+        self.down_start_button = QPushButton("start down", self.centralwidget)
+        self.down_start_button.setGeometry(QtCore.QRect(10, 100, 81, 31))
+        self.down_start_button.clicked.connect(self.down_start)
+
+        # self.down_stop_button = QPushButton("stop down", self.centralwidget)
+        # self.down_stop_button.setGeometry(QtCore.QRect(290, 100, 81, 31))
+        # self.down_stop_button.clicked.connect(self.down_start)
+
+        # 配置读取的配置信息
         self.conf = ReadConf()
         self.set_data()
 
@@ -63,20 +86,20 @@ class INDEX(QMainWindow):
         user_info = self.conf.read_asmr_user()
         download_path = self.conf.read_download_conf()
         speed_limit = str(download_path[0])
-        self.user_name_QlineEdit.setText(user_info['username'])
-        self.user_password_QlineEdit.setText(user_info['passwd'])
-        self.speed_limit_QLineEdit.setText(speed_limit)
-        self.download_path_QLineEdit.setText(download_path[1])
+        self.user_name.setText(user_info['username'])
+        self.password.setText(user_info['passwd'])
+        self.speed_limit.setText(speed_limit)
+        self.down_path.setText(download_path[1])
 
     def save_download_path(self):
-        download_path = self.download_path_QLineEdit.text()
-        speed_limit = self.speed_limit_QLineEdit.text()
+        download_path = self.down_path.text()
+        speed_limit = self.speed_limit.text()
         self.conf.write_download_conf(speed_limit, download_path)
 
     def save_user(self):
         from src.asmr_api.login import login
-        user_name = self.user_name_QlineEdit.text()
-        password = self.user_password_QlineEdit.text()
+        user_name = self.user_name.text()
+        password = self.password.text()
         self.conf.write_asmr_username(user_name, password)
         message = login()
         if message is not True:
@@ -91,7 +114,5 @@ class INDEX(QMainWindow):
         msg.exec()
 
     def down_start(self):
-        print('开始下载')
         self.download_thread = DownloadThread()
-        self.download_thread.download_finished.connect(self.show_message_box)
         self.download_thread.start()  # 启动后台下载线程

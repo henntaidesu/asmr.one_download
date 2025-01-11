@@ -11,8 +11,6 @@ def get_down_list():
         'authorization': f'Bearer {token}'
     }
     req = requests.get(url, headers=headers).json()
-    print(req)
-
     id_list = []
 
     if req['works']:
