@@ -1,8 +1,11 @@
+import os
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QLineEdit, QMessageBox, QTextEdit
 from PyQt6.uic import loadUi
 from src.asmr_api.get_asmr_works import get_asmr_downlist_api
 from src.read_conf import ReadConf
+from src.UI.creat_ui_file import creat_ui_file
+
 
 class DownloadThread(QThread):
     download_finished = pyqtSignal(str)
@@ -26,10 +29,13 @@ class DownloadThread(QThread):
         return self._is_running
 
 
-
 class INDEX(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        if not os.path.exists('src/UI/index.ui'):
+            creat_ui_file()
+
         loadUi('src/UI/index.ui', self)  # 加载.ui文件
 
         # 连接信号到方法

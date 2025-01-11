@@ -1,9 +1,10 @@
-import os
+from src.read_conf import ReadConf
+from src.UI.index import INDEX
+import sys
+from PyQt6.QtWidgets import QApplication
 
-from src.index import Index
-
-if __name__ == '__main__':
-    Index().index()
-
-
+app = QApplication(sys.argv)
+window = INDEX()
+window.show()
+sys.exit(app.exec())
 
