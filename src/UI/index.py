@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 from PyQt6 import QtCore, QtWidgets
 from src.asmr_api.get_asmr_works import get_asmr_downlist_api
 from src.read_conf import ReadConf
+from threading import Event
 
 
 class DownloadThread(QThread):
@@ -23,23 +24,18 @@ class DownloadThread(QThread):
 
     def __init__(self):
         super().__init__()
-        self._is_running = True  # 控制线程是否运行
+        self.stop_event = Event()  # 创建线程停止事件
 
     def run(self):
-        while self._is_running:
-            try:
-                get_asmr_downlist_api()  # 执行下载操作
-                if not self._is_running:  # 检查是否已停止
-                    break
+        try:
+            get_asmr_downlist_api(self.stop_event)  # 传入停止事件
+            if not self.stop_event.is_set():  # 检查是否是正常完成
                 self.download_finished.emit("下载完成")
-                break
-            except Exception as e:
-                print(e)
-                self.download_finished.emit(f"发生错误: {str(e)}")
-                break
+        except Exception as e:
+            self.download_finished.emit(f"发生错误: {str(e)}")
 
     def stop(self):
-        self._is_running = False  # 设置停止标志
+        self.stop_event.set()  # 设置停止标志
 
 
 class INDEX(QMainWindow):
@@ -177,10 +173,10 @@ class INDEX(QMainWindow):
         self.down_start_button.setGeometry(QtCore.QRect(10, 200, 80, 30))
         self.down_start_button.clicked.connect(self.down_start)
 
-        # self.down_stop_button = QPushButton("Stop", self.centralwidget)
-        # self.down_stop_button.setGeometry(QtCore.QRect(100, 200, 80, 30))
-        # self.down_stop_button.clicked.connect(self.down_stop)
-        # self.down_stop_button.setEnabled(False)
+        self.down_stop_button = QPushButton("Stop", self.centralwidget)
+        self.down_stop_button.setGeometry(QtCore.QRect(100, 200, 80, 30))
+        self.down_stop_button.clicked.connect(self.down_stop)
+        self.down_stop_button.setEnabled(False)
 
         self.set_data()
 
