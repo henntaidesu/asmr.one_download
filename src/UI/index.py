@@ -1,3 +1,5 @@
+import re
+
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
@@ -58,26 +60,48 @@ class INDEX(QMainWindow):
         self.down_path = QLineEdit(self.centralwidget)
         self.down_path.setGeometry(QtCore.QRect(80, 10, 220, 30))
         self.down_path.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.down_path.setPlaceholderText("Download_PATH")
+        self.down_path.setPlaceholderText("Download PATH")
 
         self.user_name = QLineEdit(self.centralwidget)
         self.user_name.setGeometry(QtCore.QRect(10, 50, 140, 30))
         self.user_name.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.user_name.setPlaceholderText("user_name")
+        self.user_name.setPlaceholderText("user name")
 
         self.password = QLineEdit(self.centralwidget)
         self.password.setGeometry(QtCore.QRect(160, 50, 140, 30))
         self.password.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.password.setPlaceholderText("password")
 
+        # 下载限速
         self.speed_limit = QLineEdit(self.centralwidget)
         self.speed_limit.setGeometry(QtCore.QRect(10, 10, 60, 30))
         self.speed_limit.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.speed_limit.setPlaceholderText("speed")
+        self.speed_limit.textChanged.connect(self.save_speed_limit)
+
+        # 最大重试次数
+        self.max_retries = QLineEdit(self.centralwidget)
+        self.max_retries.setGeometry(QtCore.QRect(205, 90, 60, 30))
+        self.max_retries.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.max_retries.setPlaceholderText("max retries")
+        self.max_retries.textChanged.connect(self.save_max_retries)
+        self.max_retries_label = QLabel("次", self.centralwidget)
+        self.max_retries_label.setGeometry(QtCore.QRect(260, 90, 30, 30))
+        self.max_retries_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        #下载超时时间
+        self.timeout = QLineEdit(self.centralwidget)
+        self.timeout.setGeometry(QtCore.QRect(295, 90, 50, 30))
+        self.timeout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.timeout.setPlaceholderText("timeout")
+        self.timeout.textChanged.connect(self.save_timeout)
+        self.time_out_label = QLabel("秒", self.centralwidget)
+        self.time_out_label.setGeometry(QtCore.QRect(320, 90, 75, 30))
+        self.time_out_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         # 创建下拉选择框
         self.folder_name_type_combo_box = QComboBox(self.centralwidget)
-        self.folder_name_type_combo_box.setGeometry(QtCore.QRect(120, 90, 100, 30))
+        self.folder_name_type_combo_box.setGeometry(QtCore.QRect(105, 90, 90, 30))
         self.folder_name_type_combo_box.addItem("RJ号命名")  # 添加选项1
         self.folder_name_type_combo_box.addItem("标题命名")  # 添加选项2
         self.folder_name_type_combo_box.currentTextChanged.connect(self.on_combo_changed)
@@ -139,11 +163,11 @@ class INDEX(QMainWindow):
         self.checkbox_VTT.toggled.connect(self.update_checkbox_LCR)
 
         # 创建按钮
-        self.user_conf_save_button = QPushButton("save", self.centralwidget)
+        self.user_conf_save_button = QPushButton("Login", self.centralwidget)
         self.user_conf_save_button.setGeometry(QtCore.QRect(310, 50, 60, 30))
         self.user_conf_save_button.clicked.connect(self.save_user)
 
-        self.path_conf_save_button = QPushButton("save", self.centralwidget)
+        self.path_conf_save_button = QPushButton("Save", self.centralwidget)
         self.path_conf_save_button.setGeometry(QtCore.QRect(310, 10, 60, 30))
         self.path_conf_save_button.clicked.connect(self.save_download_path)
 
@@ -155,67 +179,101 @@ class INDEX(QMainWindow):
 
     def update_checkbox_MP3(self):
         if self.selected_formats['MP3']:
-            self.conf.write_downfile_type_MP3('MP3', 'false')
+            self.conf.write_downfile_type('MP3', 'false')
         else:
-            self.conf.write_downfile_type_MP3('MP3', 'true')
+            self.conf.write_downfile_type('MP3', 'true')
     def update_checkbox_MP4(self):
         if self.selected_formats['MP4']:
-            self.conf.write_downfile_type_MP3('MP4','false')
+            self.conf.write_downfile_type('MP4', 'false')
         else:
-            self.conf.write_downfile_type_MP3('MP4', 'true')
+            self.conf.write_downfile_type('MP4', 'true')
     def update_checkbox_FLAC(self):
         if self.selected_formats['FLAC']:
-            self.conf.write_downfile_type_MP3('FLAC', 'false')
+            self.conf.write_downfile_type('FLAC', 'false')
         else:
-            self.conf.write_downfile_type_MP3('FLAC', 'true')
+            self.conf.write_downfile_type('FLAC', 'true')
     def update_checkbox_WAV(self):
         if self.selected_formats['WAV']:
-            self.conf.write_downfile_type_MP3('WAV', 'false')
+            self.conf.write_downfile_type('WAV', 'false')
         else:
-            self.conf.write_downfile_type_MP3('WAV', 'true')
+            self.conf.write_downfile_type('WAV', 'true')
     def update_checkbox_JPG(self):
         if self.selected_formats['JPG']:
-            self.conf.write_downfile_type_MP3('JPG', 'false')
+            self.conf.write_downfile_type('JPG', 'false')
         else:
-            self.conf.write_downfile_type_MP3('JPG', 'true')
+            self.conf.write_downfile_type('JPG', 'true')
     def update_checkbox_PNG(self):
         if self.selected_formats['PNG']:
-            self.conf.write_downfile_type_MP3('PNG', 'false')
+            self.conf.write_downfile_type('PNG', 'false')
         else:
-            self.conf.write_downfile_type_MP3('PNG', 'true')
+            self.conf.write_downfile_type('PNG', 'true')
     def update_checkbox_PDF(self):
         if self.selected_formats['PDF']:
-            self.conf.write_downfile_type_MP3('PDF', 'false')
+            self.conf.write_downfile_type('PDF', 'false')
         else:
-            self.conf.write_downfile_type_MP3('PDF', 'true')
+            self.conf.write_downfile_type('PDF', 'true')
     def update_checkbox_TXT(self):
         if self.selected_formats['TXT']:
-            self.conf.write_downfile_type_MP3('TXT', 'false')
+            self.conf.write_downfile_type('TXT', 'false')
         else:
-            self.conf.write_downfile_type_MP3('TXT', 'true')
+            self.conf.write_downfile_type('TXT', 'true')
     def update_checkbox_VTT(self):
         if self.selected_formats['VTT']:
-            self.conf.write_downfile_type_MP3('VTT', 'false')
+            self.conf.write_downfile_type('VTT', 'false')
         else:
-            self.conf.write_downfile_type_MP3('VTT', 'true')
+            self.conf.write_downfile_type('VTT', 'true')
     def update_checkbox_LCR(self):
         if self.selected_formats['LRC']:
-            self.conf.write_downfile_type_MP3('LRC', 'false')
+            self.conf.write_downfile_type('LRC', 'false')
         else:
-            self.conf.write_downfile_type_MP3('LRC', 'true')
+            self.conf.write_downfile_type('LRC', 'true')
 
+    def save_speed_limit(self):
+        speed_limit = self.speed_limit.text()
+        pattern = r'^\d*\.?\d*$'  # 修改正则表达式
+        if bool(re.match(pattern, speed_limit)):
+            if re.match(r'^\d*\.?\d+$', speed_limit):
+                self.conf.write_speed_limit(speed_limit)
+        else:
+            self.show_message_box('请输入小数', 'program')
+
+
+    def save_max_retries(self):
+        max_retries = self.max_retries.text()
+        pattern = r'^\d+$'  # 修改正则表达式
+        if bool(re.match(pattern, max_retries)):
+            if re.match(r'^\d+$', max_retries):
+                self.conf.write_max_retries(max_retries)
+        else:
+            self.show_message_box('请输入整数', 'program')
+
+
+
+
+    def save_timeout(self):
+        timeout = self.timeout.text()
+        pattern = r'^\d+$'  # 修改正则表达式
+        if bool(re.match(pattern, timeout)):
+            if re.match(r'^\d+$', timeout):
+                self.conf.write_timeout(timeout)
+        else:
+            self.show_message_box('请输入整数', 'program')
+
+        self.conf.write_timeout(timeout)
 
     def on_combo_changed(self, text):
         self.conf.write_name(text)
 
     def set_data(self):
         user_info = self.conf.read_asmr_user()
-        download_path = self.conf.read_download_conf()
-        speed_limit = str(download_path[0])
+        down_conf = self.conf.read_download_conf()
+        speed_limit = str(down_conf['speed_limit'])
         self.user_name.setText(user_info["username"])
         self.password.setText(user_info["passwd"])
         self.speed_limit.setText(speed_limit)
-        self.down_path.setText(download_path[1])
+        self.down_path.setText(down_conf['download_path'])
+        self.max_retries.setText(str(down_conf['max_retries']))
+        self.timeout.setText(str(down_conf['time_out']))
         # 设置命名方式值
         folder_for_name = self.conf.read_name()
         if folder_for_name == "标题命名":
