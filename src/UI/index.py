@@ -1,6 +1,3 @@
-import os
-from pickle import PROTO
-
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
@@ -33,6 +30,7 @@ class DownloadThread(QThread):
                 self.download_finished.emit("下载完成")
                 break
             except Exception as e:
+                print(e)
                 self.download_finished.emit(f"发生错误: {str(e)}")
                 break
 
