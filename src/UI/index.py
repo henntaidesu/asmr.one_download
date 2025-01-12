@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6 import QtCore, QtWidgets
 from src.asmr_api.get_asmr_works import get_asmr_downlist_api
+from src.datebase_execution import SQLiteDB
 from src.read_conf import ReadConf
 from threading import Event
 
@@ -169,7 +170,7 @@ class INDEX(QMainWindow):
         self.path_conf_save_button.setGeometry(QtCore.QRect(310, 10, 60, 30))
         self.path_conf_save_button.clicked.connect(self.save_download_path)
 
-        self.down_start_button = QPushButton("start down", self.centralwidget)
+        self.down_start_button = QPushButton("Start", self.centralwidget)
         self.down_start_button.setGeometry(QtCore.QRect(10, 200, 80, 30))
         self.down_start_button.clicked.connect(self.down_start)
 
@@ -313,13 +314,15 @@ class INDEX(QMainWindow):
         self.download_thread.download_finished.connect(self.on_download_finished)
         self.download_thread.finished.connect(self.download_thread.deleteLater)
         self.download_thread.start()
+        self.down_start_button.setEnabled(False)
         self.down_stop_button.setEnabled(True)
 
     def down_stop(self):
         if hasattr(self, 'download_thread') and self.download_thread.isRunning():
-            self.download_thread.stop()  # 停止线程
-            self.download_thread.wait()  # 等待线程完全停止
-            self.down_stop_button.setEnabled(False)  # 禁用停止按钮
+            self.download_thread.stop()
+            self.download_thread.wait()
+            self.down_stop_button.setEnabled(False)
+            self.down_start_button.setEnabled(True)
             self.show_message_box("下载已停止", "停止操作")
 
     def on_download_finished(self, message):
