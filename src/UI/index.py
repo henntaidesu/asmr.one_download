@@ -29,6 +29,8 @@ class DownloadThread(QThread):
         while self._is_running:
             try:
                 get_asmr_downlist_api()  # 执行下载操作
+                if not self._is_running:  # 检查是否已停止
+                    break
                 self.download_finished.emit("下载完成")
                 break
             except Exception as e:
@@ -167,13 +169,18 @@ class INDEX(QMainWindow):
         self.user_conf_save_button.setGeometry(QtCore.QRect(310, 50, 60, 30))
         self.user_conf_save_button.clicked.connect(self.save_user)
 
-        self.path_conf_save_button = QPushButton("Save", self.centralwidget)
+        self.path_conf_save_button = QPushButton("Select", self.centralwidget)
         self.path_conf_save_button.setGeometry(QtCore.QRect(310, 10, 60, 30))
         self.path_conf_save_button.clicked.connect(self.save_download_path)
 
         self.down_start_button = QPushButton("start down", self.centralwidget)
         self.down_start_button.setGeometry(QtCore.QRect(10, 200, 80, 30))
         self.down_start_button.clicked.connect(self.down_start)
+
+        # self.down_stop_button = QPushButton("Stop", self.centralwidget)
+        # self.down_stop_button.setGeometry(QtCore.QRect(100, 200, 80, 30))
+        # self.down_stop_button.clicked.connect(self.down_stop)
+        # self.down_stop_button.setEnabled(False)
 
         self.set_data()
 
@@ -273,7 +280,7 @@ class INDEX(QMainWindow):
         self.speed_limit.setText(speed_limit)
         self.down_path.setText(down_conf['download_path'])
         self.max_retries.setText(str(down_conf['max_retries']))
-        self.timeout.setText(str(down_conf['time_out']))
+        self.timeout.setText(str(down_conf['timeout']))
         # 设置命名方式值
         folder_for_name = self.conf.read_name()
         if folder_for_name == "标题命名":
@@ -310,6 +317,15 @@ class INDEX(QMainWindow):
         self.download_thread.download_finished.connect(self.on_download_finished)
         self.download_thread.finished.connect(self.download_thread.deleteLater)
         self.download_thread.start()
+        self.down_stop_button.setEnabled(True)
+
+    def down_stop(self):
+        if hasattr(self, 'download_thread') and self.download_thread.isRunning():
+            self.download_thread.stop()  # 停止线程
+            self.download_thread.wait()  # 等待线程完全停止
+            self.down_stop_button.setEnabled(False)  # 禁用停止按钮
+            self.show_message_box("下载已停止", "停止操作")
 
     def on_download_finished(self, message):
         self.show_message_box(message, "下载完成")
+        self.down_stop_button.setEnabled(False)
