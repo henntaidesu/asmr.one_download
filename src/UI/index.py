@@ -2,7 +2,6 @@ import re
 
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
-    QApplication,
     QMainWindow,
     QPushButton,
     QLineEdit,
@@ -14,7 +13,6 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6 import QtCore, QtWidgets
 from src.asmr_api.get_asmr_works import get_asmr_downlist_api
-from src.datebase_execution import SQLiteDB
 from src.read_conf import ReadConf
 from threading import Event
 
@@ -179,10 +177,10 @@ class INDEX(QMainWindow):
         self.down_stop_button.clicked.connect(self.down_stop)
         self.down_stop_button.setEnabled(False)
         # 打开下载页面按钮
-        self.down_stop_button = QPushButton("down page", self.centralwidget)
-        self.down_stop_button.setGeometry(QtCore.QRect(280, 200, 80, 30))
-        self.down_stop_button.clicked.connect(self.down_stop)
-        self.down_stop_button.setEnabled(False)
+        # self.down_stop_button = QPushButton("down page", self.centralwidget)
+        # self.down_stop_button.setGeometry(QtCore.QRect(280, 200, 80, 30))
+        # self.down_stop_button.clicked.connect(self.down_stop)
+        # self.down_stop_button.setEnabled(False)
 
 
         self.set_data()
@@ -247,7 +245,6 @@ class INDEX(QMainWindow):
         else:
             self.show_message_box('请输入小数', 'program')
 
-
     def save_max_retries(self):
         max_retries = self.max_retries.text()
         pattern = r'^\d+$'  # 修改正则表达式
@@ -256,9 +253,6 @@ class INDEX(QMainWindow):
                 self.conf.write_max_retries(max_retries)
         else:
             self.show_message_box('请输入整数', 'program')
-
-
-
 
     def save_timeout(self):
         timeout = self.timeout.text()
@@ -288,7 +282,6 @@ class INDEX(QMainWindow):
         folder_for_name = self.conf.read_name()
         if folder_for_name == "标题命名":
             self.folder_name_type_combo_box.setCurrentIndex(1)
-
 
     def save_download_path(self):
         download_path = QFileDialog.getExistingDirectory(self, "选择下载路径")

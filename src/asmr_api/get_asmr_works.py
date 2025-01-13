@@ -29,14 +29,13 @@ def down_file(url, file_name, stop_event):
         if os.path.exists(file_name):
             downloaded_size = os.path.getsize(file_name)
             if downloaded_size == total_size:
-                print(f"文件已完整下载，跳过下载: {file_name}")
+                print(f"文件已下载，跳过下载: {file_name}")
                 return True
         else:
             downloaded_size = 0
 
         # 设置请求头，支持断点续传
         headers = {"Range": f"bytes={downloaded_size}-"}
-
         retries = 0
         while retries < max_retries:
             try:
@@ -181,12 +180,14 @@ def get_asmr_downlist_api(stop_event):
                 return
 
             file_title = item['title']
+            file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_title)
             file_type = file_title[file_title.rfind('.') + 1:].upper()
             if not selected_formats.get(file_type, False):
-                print(f"跳过不支持的文件类型: {file_title}")
+                print(f"跳过文件: {file_title}")
                 continue
 
             print(f"正在下载作品 {work_title} ({idx}/{len(results)})")
+            print(f"-" * 80)
             file_name = os.path.join(item["download_path"], item["title"])
 
             if not os.path.exists(item["download_path"]):
@@ -195,6 +196,8 @@ def get_asmr_downlist_api(stop_event):
             success = down_file(item['media_download_url'], file_name, stop_event)
             if not success:
                 print(f"下载失败: {file_title}")
+
+            time.sleep(0.5)
 
         # 更新数据库状态
         if check_DB:
