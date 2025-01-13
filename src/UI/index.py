@@ -161,23 +161,29 @@ class INDEX(QMainWindow):
         self.checkbox_VTT.setChecked(self.selected_formats["LRC"])
         self.checkbox_VTT.toggled.connect(self.update_checkbox_LCR)
 
-        # 创建按钮
+        # 登录按钮
         self.user_conf_save_button = QPushButton("Login", self.centralwidget)
         self.user_conf_save_button.setGeometry(QtCore.QRect(310, 50, 60, 30))
         self.user_conf_save_button.clicked.connect(self.save_user)
-
+        # 设置下载路径按钮
         self.path_conf_save_button = QPushButton("Select", self.centralwidget)
         self.path_conf_save_button.setGeometry(QtCore.QRect(310, 10, 60, 30))
         self.path_conf_save_button.clicked.connect(self.save_download_path)
-
+        # 开始下载按钮
         self.down_start_button = QPushButton("Start", self.centralwidget)
         self.down_start_button.setGeometry(QtCore.QRect(10, 200, 80, 30))
         self.down_start_button.clicked.connect(self.down_start)
-
+        # 停止下载按钮
         self.down_stop_button = QPushButton("Stop", self.centralwidget)
         self.down_stop_button.setGeometry(QtCore.QRect(100, 200, 80, 30))
         self.down_stop_button.clicked.connect(self.down_stop)
         self.down_stop_button.setEnabled(False)
+        # 打开下载页面按钮
+        self.down_stop_button = QPushButton("down page", self.centralwidget)
+        self.down_stop_button.setGeometry(QtCore.QRect(280, 200, 80, 30))
+        self.down_stop_button.clicked.connect(self.down_stop)
+        self.down_stop_button.setEnabled(False)
+
 
         self.set_data()
 
@@ -300,6 +306,8 @@ class INDEX(QMainWindow):
         message = login()
         if message is not True:
             self.show_message_box(message, "from asmr.one")
+        else:
+            self.show_message_box('登录成功', "from asmr.one")
 
     def show_message_box(self, message, message_from):
         msg = QMessageBox()
