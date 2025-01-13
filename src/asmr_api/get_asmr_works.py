@@ -187,6 +187,8 @@ def get_asmr_downlist_api(stop_event):
                 continue
 
             print(f"正在下载作品 {work_title} ({idx}/{len(results)})")
+            print(f"文件类型： {item['file_type']}")
+            print(f"文件名称： {item['title']}")
             print(f"-" * 80)
             file_name = os.path.join(item["download_path"], item["title"])
 
