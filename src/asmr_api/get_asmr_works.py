@@ -20,8 +20,7 @@ def down_file(url, file_name, stop_event):
         # 获取文件总大小
         response = requests.head(url, timeout=timeout)
         if response.status_code != 200:
-            print(f"无法获取文件信息，状态码: {response.status_code}")
-            return False
+            return False, f"无法获取文件信息，状态码: {response.status_code}"
 
         total_size = int(response.headers.get("Content-Length", 0))
 
@@ -30,7 +29,7 @@ def down_file(url, file_name, stop_event):
             downloaded_size = os.path.getsize(file_name)
             if downloaded_size == total_size:
                 print(f"文件已下载，跳过下载: {file_name}")
-                return True
+                return True, 'INFO'
         else:
             downloaded_size = 0
 
@@ -68,7 +67,7 @@ def down_file(url, file_name, stop_event):
                                 start_time = time.time()
                                 bytes_downloaded_in_second = 0
 
-                return True
+                return True, 'INFO'
 
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                 retries += 1
@@ -80,7 +79,7 @@ def down_file(url, file_name, stop_event):
 
     except Exception as e:
         print(f"下载出错: {e}")
-        return False
+        return False, e
 
 
 def collect_audio_info(node, base_path, parent_folder=None):
@@ -186,18 +185,20 @@ def get_asmr_downlist_api(stop_event):
                 print(f"跳过文件: {file_title}")
                 continue
 
-            print(f"正在下载作品 {work_title} ({idx}/{len(results)})")
+            print(f"-" * 80)
+            print(f"正在下载： {work_title} ({idx}/{len(results)})")
             print(f"文件类型： {item['file_type']}")
             print(f"文件名称： {item['title']}")
-            print(f"-" * 80)
+
             file_name = os.path.join(item["download_path"], item["title"])
 
             if not os.path.exists(item["download_path"]):
                 os.makedirs(item["download_path"], exist_ok=True)
 
-            success = down_file(item['media_download_url'], file_name, stop_event)
+            success, message = down_file(item['media_download_url'], file_name, stop_event)
             if not success:
-                print(f"下载失败: {file_title}")
+                print(f"下载失败: {file_title} \n {message}")
+                return False
 
             time.sleep(0.5)
 
