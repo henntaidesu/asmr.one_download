@@ -309,6 +309,8 @@ class INDEX(QMainWindow):
         msg.setWindowTitle(message_from)
         msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
         msg.exec()
+        if message == 'max_error_stop':
+            self.down_start_button.setEnabled(True)
 
     def down_start(self):
         self.download_thread = DownloadThread()

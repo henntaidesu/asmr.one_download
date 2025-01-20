@@ -75,7 +75,7 @@ def down_file(url, file_name, stop_event):
                 time.sleep(2)
 
         print("下载失败，已达到最大重试次数。")
-        return False
+        return False, 'max_error_stop'
 
     except Exception as e:
         print(f"下载出错: {e}")
