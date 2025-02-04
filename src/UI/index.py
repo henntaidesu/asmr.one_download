@@ -309,7 +309,7 @@ class INDEX(QMainWindow):
         msg.setWindowTitle(message_from)
         msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
         msg.exec()
-        if message == 'max_error_stop':
+        if message in ['max_error_stop', 'INFO'] :
             self.down_start_button.setEnabled(True)
 
     def down_start(self):

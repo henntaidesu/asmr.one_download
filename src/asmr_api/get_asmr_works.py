@@ -54,7 +54,7 @@ def down_file(url, file_name, stop_event):
                     for chunk in resp.iter_content(chunk_size=1024):
                         if stop_event.is_set():
                             print("检测到停止信号，终止下载")
-                            return False
+                            return False, 'INFO'
                         if chunk:
                             file.write(chunk)
                             bar.update(len(chunk))
@@ -79,7 +79,7 @@ def down_file(url, file_name, stop_event):
 
     except Exception as e:
         print(f"下载出错: {e}")
-        return False, e
+        return False, 'max_error_stop'
 
 
 def collect_audio_info(node, base_path, parent_folder=None):
@@ -153,12 +153,19 @@ def get_asmr_downlist_api(stop_event):
 
         # 根据配置调整文件夹命名方式
         if folder_flag == 'RJ号命名':
-            work_title = f'RJ{keyword:06d}'
+            if len(str(keyword)) > 6:
+                work_title = f'RJ{keyword:08d}'
+            else:
+                work_title = f'RJ{keyword:06d}'
 
         try:
             # 检查是否开启数据库
             if check_DB:
-                rj_number = f'RJ{keyword:06d}'
+                if len(str(keyword)) > 6:
+                    rj_number = f'RJ{keyword:08d}'
+                else:
+                    rj_number = f'RJ{keyword:06d}'
+
                 sql = f"SELECT work_state FROM `works` WHERE work_id = '{rj_number}'"
                 DB_flag = int(MySQLDB().select(sql)[1][0][0])
                 if DB_flag < 0:
