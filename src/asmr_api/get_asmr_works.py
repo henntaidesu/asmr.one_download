@@ -67,7 +67,7 @@ def down_file(url, file_name, stop_event):
                                 start_time = time.time()
                                 bytes_downloaded_in_second = 0
 
-                return True, 'INFO'
+                return True, '下载完成'
 
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                 retries += 1
@@ -75,11 +75,11 @@ def down_file(url, file_name, stop_event):
                 time.sleep(2)
 
         print("下载失败，已达到最大重试次数。")
-        return False, 'max_error_stop'
+        return False, '下载失败，已达到最大重试次数。'
 
     except Exception as e:
         print(f"下载出错: {e}")
-        return False, 'max_error_stop'
+        return False, e
 
 
 def collect_audio_info(node, base_path, parent_folder=None):
@@ -89,25 +89,29 @@ def collect_audio_info(node, base_path, parent_folder=None):
     results = []
     node_type = node.get("type")
     node_title = node.get("title")
+    try:
+        if node_type == "folder":
+            # 如果是文件夹类型，递归收集子节点
+            children = node.get("children", [])
+            for child in children:
+                new_base_path = os.path.join(base_path, node_title) if node_title else base_path
+                results.extend(collect_audio_info(child, new_base_path, node_title))
+        else:
+            # 如果是文件，提取音频信息
+            media_url = node.get("mediaStreamUrl") or node.get("mediaDownloadUrl")
+            # if parent_folder:
+            #     parent_folder = parent_folder.re.sub(r'[\/\\:\*\?\<\>\|]', '-', parent_folder)
+            results.append({
+                "file_type": node_type,
+                "folder_title": parent_folder,
+                "title": node_title,
+                "media_download_url": media_url,
+                "download_path": base_path
+            })
 
-    if node_type == "folder":
-        # 如果是文件夹类型，递归收集子节点
-        children = node.get("children", [])
-        for child in children:
-            new_base_path = os.path.join(base_path, node_title) if node_title else base_path
-            results.extend(collect_audio_info(child, new_base_path, node_title))
-    else:
-        # 如果是文件，提取音频信息
-        media_url = node.get("mediaStreamUrl") or node.get("mediaDownloadUrl")
-        results.append({
-            "file_type": node_type,
-            "folder_title": parent_folder,
-            "title": node_title,
-            "media_download_url": media_url,
-            "download_path": base_path
-        })
-
-    return results
+        return results
+    except Exception as e:
+        print(e)
 
 
 def parse_req(req, rj_number, download_path):
@@ -197,7 +201,7 @@ def get_asmr_downlist_api(stop_event):
             print(f"文件类型： {item['file_type']}")
             print(f"文件名称： {item['title']}")
 
-            file_name = os.path.join(item["download_path"], item["title"])
+            file_name = os.path.join(item["download_path"], file_title)
 
             if not os.path.exists(item["download_path"]):
                 os.makedirs(item["download_path"], exist_ok=True)
@@ -205,7 +209,7 @@ def get_asmr_downlist_api(stop_event):
             success, message = down_file(item['media_download_url'], file_name, stop_event)
             if not success:
                 print(f"下载失败: {file_title} \n {message}")
-                return False
+                return success, message
 
             time.sleep(0.5)
 

@@ -27,9 +27,9 @@ class DownloadThread(QThread):
 
     def run(self):
         try:
-            get_asmr_downlist_api(self.stop_event)  # 传入停止事件
+            success, message = get_asmr_downlist_api(self.stop_event)  # 传入停止事件
             if not self.stop_event.is_set():  # 检查是否是正常完成
-                self.download_finished.emit("下载完成")
+                self.download_finished.emit(message)
         except Exception as e:
             self.download_finished.emit(f"发生错误: {str(e)}")
 
@@ -309,8 +309,7 @@ class INDEX(QMainWindow):
         msg.setWindowTitle(message_from)
         msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
         msg.exec()
-        if message in ['max_error_stop', 'INFO'] :
-            self.down_start_button.setEnabled(True)
+        self.down_start_button.setEnabled(True)
 
     def down_start(self):
         self.download_thread = DownloadThread()
