@@ -96,6 +96,11 @@ class INDEX(QMainWindow):
         self.time_out_label.setGeometry(QtCore.QRect(320, 90, 75, 30))
         self.time_out_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
+        # 文件命名方式标签
+        self.label = QLabel("文件夹命名方式", self.centralwidget)
+        self.label.setGeometry(QtCore.QRect(10, 90, 90, 30))
+        self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+
         # 创建下拉选择框
         self.folder_name_type_combo_box = QComboBox(self.centralwidget)
         self.folder_name_type_combo_box.setGeometry(QtCore.QRect(105, 90, 90, 30))
@@ -103,59 +108,72 @@ class INDEX(QMainWindow):
         self.folder_name_type_combo_box.addItem("标题命名")  # 添加选项2
         self.folder_name_type_combo_box.currentTextChanged.connect(self.on_combo_changed)
 
-        # 文件命名方式标签
-        self.label = QLabel("文件夹命名方式", self.centralwidget)
-        self.label.setGeometry(QtCore.QRect(10, 90, 90, 30))
-        self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        # 创建代理下拉选择框
+
+        self.checkbox_MP3 = QCheckBox("是否使用代理", self.centralwidget)
+        self.checkbox_MP3.setGeometry(QtCore.QRect(105, 125, 60, 300))
+        # self.checkbox_MP3.setChecked(self.selected_formats["MP3"])
+        # self.checkbox_MP3.toggled.connect(self.update_checkbox_MP3)
+
+        # self.set_open_proxy.currentTextChanged.connect(self.on_combo_changed)
+
+        # 创建代理下拉选择框
+        self.set_proxy_type = QComboBox(self.centralwidget)
+        self.set_proxy_type.setGeometry(QtCore.QRect(165, 125, 75, 30))
+        self.set_proxy_type.addItem("HTTP")  # 添加选项1
+        self.set_proxy_type.addItem("Cosks5")  # 添加选项2
+        self.set_proxy_type.addItem("Cosks4")
+        # self.set_proxy_type.currentTextChanged.connect(self.on_combo_changed)
+
 
         # 选择性下载
         self.checkbox_MP3 = QCheckBox("MP3", self.centralwidget)
-        self.checkbox_MP3.setGeometry(QtCore.QRect(10, 130, 60, 30))
+        self.checkbox_MP3.setGeometry(QtCore.QRect(10, 150, 60, 30))
         self.checkbox_MP3.setChecked(self.selected_formats["MP3"])
         self.checkbox_MP3.toggled.connect(self.update_checkbox_MP3)
 
         self.checkbox_MP4 = QCheckBox("MP4", self.centralwidget)
-        self.checkbox_MP4.setGeometry(QtCore.QRect(70, 130, 60, 30))
+        self.checkbox_MP4.setGeometry(QtCore.QRect(70, 150, 60, 30))
         self.checkbox_MP4.setChecked(self.selected_formats["MP4"])
         self.checkbox_MP4.toggled.connect(self.update_checkbox_MP4)
 
         self.checkbox_FLAC = QCheckBox("FLAC", self.centralwidget)
-        self.checkbox_FLAC.setGeometry(QtCore.QRect(130, 130, 60, 30))
+        self.checkbox_FLAC.setGeometry(QtCore.QRect(130, 150, 60, 30))
         self.checkbox_FLAC.setChecked(self.selected_formats["FLAC"])
         self.checkbox_FLAC.toggled.connect(self.update_checkbox_FLAC)
 
         self.checkbox_WAV = QCheckBox("WAV", self.centralwidget)
-        self.checkbox_WAV.setGeometry(QtCore.QRect(190, 130, 60, 30))
+        self.checkbox_WAV.setGeometry(QtCore.QRect(190, 150, 60, 30))
         self.checkbox_WAV.setChecked(self.selected_formats["WAV"])
         self.checkbox_WAV.toggled.connect(self.update_checkbox_WAV)
 
         self.checkbox_JPG = QCheckBox("JPG", self.centralwidget)
-        self.checkbox_JPG.setGeometry(QtCore.QRect(250, 130, 60, 30))
+        self.checkbox_JPG.setGeometry(QtCore.QRect(250, 150, 60, 30))
         self.checkbox_JPG.setChecked(self.selected_formats["JPG"])
         self.checkbox_JPG.toggled.connect(self.update_checkbox_JPG)
 
         self.checkbox_PNG = QCheckBox("PNG", self.centralwidget)
-        self.checkbox_PNG.setGeometry(QtCore.QRect(310, 130, 60, 30))
+        self.checkbox_PNG.setGeometry(QtCore.QRect(310, 150, 60, 30))
         self.checkbox_PNG.setChecked(self.selected_formats["PNG"])
         self.checkbox_PNG.toggled.connect(self.update_checkbox_PNG)
 
         self.checkbox_PDF = QCheckBox("PDF", self.centralwidget)
-        self.checkbox_PDF.setGeometry(QtCore.QRect(10, 150, 60, 30))
+        self.checkbox_PDF.setGeometry(QtCore.QRect(10, 170, 60, 30))
         self.checkbox_PDF.setChecked(self.selected_formats["PDF"])
         self.checkbox_PDF.toggled.connect(self.update_checkbox_PDF)
 
         self.checkbox_TXT = QCheckBox("TXT", self.centralwidget)
-        self.checkbox_TXT.setGeometry(QtCore.QRect(70, 150, 60, 30))
+        self.checkbox_TXT.setGeometry(QtCore.QRect(70, 170, 60, 30))
         self.checkbox_TXT.setChecked(self.selected_formats["TXT"])
         self.checkbox_TXT.toggled.connect(self.update_checkbox_TXT)
 
         self.checkbox_VTT = QCheckBox("VTT", self.centralwidget)
-        self.checkbox_VTT.setGeometry(QtCore.QRect(130, 150, 60, 30))
+        self.checkbox_VTT.setGeometry(QtCore.QRect(130, 170, 60, 30))
         self.checkbox_VTT.setChecked(self.selected_formats["VTT"])
         self.checkbox_VTT.toggled.connect(self.update_checkbox_VTT)
 
         self.checkbox_VTT = QCheckBox("LRC", self.centralwidget)
-        self.checkbox_VTT.setGeometry(QtCore.QRect(190, 150, 60, 30))
+        self.checkbox_VTT.setGeometry(QtCore.QRect(190, 170, 60, 30))
         self.checkbox_VTT.setChecked(self.selected_formats["LRC"])
         self.checkbox_VTT.toggled.connect(self.update_checkbox_LCR)
 

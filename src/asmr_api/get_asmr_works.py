@@ -15,29 +15,31 @@ def down_file(url, file_name, stop_event):
     speed_limit = download_conf_data["speed_limit"]
     max_retries = download_conf_data["max_retries"]
     timeout = download_conf_data["timeout"]
+    min_speed = 256 * 1024  # 256 KB/s
+    speed_check_interval = 30  # 每30秒检查一次下载速度
 
     try:
-        # 获取文件总大小
-        response = requests.head(url, timeout=timeout)
-        if response.status_code != 200:
-            return False, f"无法获取文件信息，状态码: {response.status_code}"
-
-        total_size = int(response.headers.get("Content-Length", 0))
-
-        # 检查本地文件是否已存在且完整
-        if os.path.exists(file_name):
-            downloaded_size = os.path.getsize(file_name)
-            if downloaded_size == total_size:
-                print(f"文件已下载，跳过下载: {file_name}")
-                return True, 'INFO'
-        else:
-            downloaded_size = 0
-
-        # 设置请求头，支持断点续传
-        headers = {"Range": f"bytes={downloaded_size}-"}
         retries = 0
         while retries < max_retries:
             try:
+                # 获取文件总大小
+                response = requests.head(url, timeout=timeout)
+                if response.status_code != 200:
+                    return False, f"无法获取文件信息，状态码: {response.status_code}"
+
+                total_size = int(response.headers.get("Content-Length", 0))
+
+                # 检查本地文件是否已存在且完整
+                if os.path.exists(file_name):
+                    downloaded_size = os.path.getsize(file_name)
+                    if downloaded_size == total_size:
+                        print(f"文件已下载，跳过下载: {file_name}")
+                        return True, 'INFO'
+                else:
+                    downloaded_size = 0
+
+                # 设置请求头，支持断点续传
+                headers = {"Range": f"bytes={downloaded_size}-"}
                 with requests.get(url, headers=headers, stream=True, timeout=timeout) as resp, \
                         open(file_name, "ab") as file, \
                         tqdm(
@@ -49,7 +51,8 @@ def down_file(url, file_name, stop_event):
                             unit_divisor=1024,
                         ) as bar:
                     start_time = time.time()
-                    bytes_downloaded_in_second = 0
+                    last_check_time = start_time
+                    bytes_downloaded_since_last_check = 0
 
                     for chunk in resp.iter_content(chunk_size=1024):
                         if stop_event.is_set():
@@ -58,16 +61,29 @@ def down_file(url, file_name, stop_event):
                         if chunk:
                             file.write(chunk)
                             bar.update(len(chunk))
-                            bytes_downloaded_in_second += len(chunk)
+                            bytes_downloaded_since_last_check += len(chunk)
 
                             # 限制下载速度
                             elapsed_time = time.time() - start_time
-                            if elapsed_time < 1 and bytes_downloaded_in_second >= speed_limit * 1024 * 1024:
+                            if elapsed_time < 1 and bytes_downloaded_since_last_check >= speed_limit * 1024 * 1024:
                                 time.sleep(1 - elapsed_time)
                                 start_time = time.time()
-                                bytes_downloaded_in_second = 0
+                                bytes_downloaded_since_last_check = 0
 
-                return True, '下载完成'
+                            # 每30秒检查一次下载速度
+                            current_time = time.time()
+                            if current_time - last_check_time >= speed_check_interval:
+                                current_speed = bytes_downloaded_since_last_check / (current_time - last_check_time)
+                                if current_speed < min_speed:
+                                    print(f"下载速度低于256KB/s ({current_speed / 1024:.2f} KB/s 正在重试 ({retries}/{max_retries})，重启下载...")
+                                    retries += 1
+                                    break
+
+                                last_check_time = current_time
+                                bytes_downloaded_since_last_check = 0
+
+                    else:
+                        return True, '下载完成'
 
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                 retries += 1
@@ -79,6 +95,12 @@ def down_file(url, file_name, stop_event):
 
     except Exception as e:
         print(f"下载出错: {e}")
+        print(type(e).__name__)
+        if type(e).__name__ == "ChunkedEncodingError":
+            if os.path.exists(file_name):
+                os.remove(file_name)
+                down_file(url, file_name, stop_event)
+
         return False, e
 
 
