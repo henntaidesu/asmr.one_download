@@ -50,7 +50,7 @@ class INDEX(QMainWindow):
 
         # 创建界面组件
         self.setWindowTitle("ASMR_download")
-        self.setFixedSize(400, 250)
+        self.setFixedSize(380, 250)
 
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
@@ -207,10 +207,10 @@ class INDEX(QMainWindow):
         self.down_stop_button.clicked.connect(self.down_stop)
         self.down_stop_button.setEnabled(False)
         # 打开下载页面按钮
-        # self.down_stop_button = QPushButton("down page", self.centralwidget)
-        # self.down_stop_button.setGeometry(QtCore.QRect(280, 200, 80, 30))
-        # self.down_stop_button.clicked.connect(self.down_stop)
-        # self.down_stop_button.setEnabled(False)
+        self.down_stop_button = QPushButton("down page", self.centralwidget)
+        self.down_stop_button.setGeometry(QtCore.QRect(280, 200, 80, 30))
+        self.down_stop_button.clicked.connect(self.down_stop)
+        self.down_stop_button.setEnabled(False)
 
 
         self.set_data()
