@@ -17,7 +17,14 @@ def down_file(url, file_name, stop_event):
     timeout = download_conf_data["timeout"]
     min_speed = 256 * 1024  # 256 KB/s
     speed_check_interval = 30  # 每30秒检查一次下载速度
-
+    proxy = conf.read_proxy_conf()
+    if proxy['open_proxy']:
+        proxy_url = {
+            f'http': f'{proxy["proxy_type"]}://{proxy["host"]}:{proxy["port"]}',
+            f'https': f'{proxy["proxy_type"]}://{proxy["host"]}:{proxy["port"]}'
+        }
+    else:
+        proxy_url = None
     try:
         retries = 0
         while retries < max_retries:
@@ -40,7 +47,7 @@ def down_file(url, file_name, stop_event):
 
                 # 设置请求头，支持断点续传
                 headers = {"Range": f"bytes={downloaded_size}-"}
-                with requests.get(url, headers=headers, stream=True, timeout=timeout) as resp, \
+                with requests.get(url, headers=headers, stream=True, timeout=timeout, proxies=proxy_url) as resp, \
                         open(file_name, "ab") as file, \
                         tqdm(
                             desc="下载中",

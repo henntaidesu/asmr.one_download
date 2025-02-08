@@ -60,7 +60,7 @@ class ReadConf:
         folder_for_name = self.config.get('name', 'name')
         return folder_for_name
 
-    def write_name(self, name):
+    def write_folder_for_name(self, name):
         self.config.set('name', 'name', name)
         with open('conf.ini', 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
@@ -129,10 +129,49 @@ class ReadConf:
             self.config.write(configfile)
 
 
-
     def write_download_conf(self, speed_limit, download_path):
         self.config.set('down_conf', 'speed_limit', speed_limit)
         self.config.set('down_conf', 'download_path', download_path)
+        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+            self.config.write(configfile)
+
+    def read_proxy_conf(self):
+        host = self.config.get('proxy', 'host')
+        port = self.config.get('proxy', 'port')
+        proxy_type = self.config.get('proxy', 'type')
+        open_proxy = self.config.get('proxy', 'open_proxy')
+        if open_proxy == 'True':
+            open_proxy = True
+        else:
+            open_proxy = False
+        return {
+            'open_proxy': open_proxy,
+            'host': host,
+            'port': port,
+            'proxy_type': proxy_type
+        }
+
+    def write_proxy_host(self, proxy_host):
+        self.config.set('proxy', 'host', proxy_host)
+        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+            self.config.write(configfile)
+
+    def write_proxy_port(self, proxy_port):
+        self.config.set('proxy', 'port', proxy_port)
+        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+            self.config.write(configfile)
+
+    def write_proxy_type(self, proxy_type):
+        self.config.set('proxy', 'type', proxy_type)
+        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+            self.config.write(configfile)
+
+    def write_open_proxy(self, open_proxy):
+        # if open_proxy:
+        #     open_proxy = 'True'
+        # else:
+        #     open_proxy = 'False'
+        self.config.set('proxy', 'open_proxy', open_proxy)
         with open('conf.ini', 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
@@ -181,6 +220,13 @@ def create_ini_file():
         'password': 'password',
         'database': 'asmr',
         'open_db': 'False'
+    }
+
+    config['proxy'] = {
+        'open_proxy': 'False',
+        'host': 'localhost',
+        'port': '10809',
+        'type': 'http',
     }
 
     # 将配置写入文件

@@ -1,4 +1,5 @@
 import re
+from xmlrpc.client import ServerProxy
 
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -15,7 +16,7 @@ from PyQt6 import QtCore, QtWidgets
 from src.asmr_api.get_asmr_works import get_asmr_downlist_api
 from src.read_conf import ReadConf
 from threading import Event
-
+import ipaddress
 
 class DownloadThread(QThread):
     download_finished = pyqtSignal(str)
@@ -44,11 +45,12 @@ class INDEX(QMainWindow):
         # 配置读取
         self.conf = ReadConf()
         self.selected_formats = self.conf.read_downfile_type()
+        self.proxy_conf = self.conf.read_proxy_conf()
 
 
         # 创建界面组件
         self.setWindowTitle("ASMR_download")
-        self.setGeometry(100, 100, 400, 250)
+        self.setFixedSize(400, 250)
 
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
@@ -74,14 +76,14 @@ class INDEX(QMainWindow):
         self.speed_limit.setGeometry(QtCore.QRect(10, 10, 60, 30))
         self.speed_limit.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.speed_limit.setPlaceholderText("speed")
-        self.speed_limit.textChanged.connect(self.save_speed_limit)
+        self.speed_limit.editingFinished.connect(self.save_speed_limit)
 
         # 最大重试次数
         self.max_retries = QLineEdit(self.centralwidget)
         self.max_retries.setGeometry(QtCore.QRect(205, 90, 60, 30))
         self.max_retries.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.max_retries.setPlaceholderText("max retries")
-        self.max_retries.textChanged.connect(self.save_max_retries)
+        self.max_retries.editingFinished.connect(self.save_max_retries)
         self.max_retries_label = QLabel("次", self.centralwidget)
         self.max_retries_label.setGeometry(QtCore.QRect(260, 90, 30, 30))
         self.max_retries_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -91,7 +93,7 @@ class INDEX(QMainWindow):
         self.timeout.setGeometry(QtCore.QRect(295, 90, 50, 30))
         self.timeout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.timeout.setPlaceholderText("timeout")
-        self.timeout.textChanged.connect(self.save_timeout)
+        self.timeout.editingFinished.connect(self.save_timeout)
         self.time_out_label = QLabel("秒", self.centralwidget)
         self.time_out_label.setGeometry(QtCore.QRect(320, 90, 75, 30))
         self.time_out_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -106,24 +108,34 @@ class INDEX(QMainWindow):
         self.folder_name_type_combo_box.setGeometry(QtCore.QRect(105, 90, 90, 30))
         self.folder_name_type_combo_box.addItem("RJ号命名")  # 添加选项1
         self.folder_name_type_combo_box.addItem("标题命名")  # 添加选项2
-        self.folder_name_type_combo_box.currentTextChanged.connect(self.on_combo_changed)
+        self.folder_name_type_combo_box.currentTextChanged.connect(self.set_folder_for_name)
 
-        # 创建代理下拉选择框
-
-        self.checkbox_MP3 = QCheckBox("是否使用代理", self.centralwidget)
-        self.checkbox_MP3.setGeometry(QtCore.QRect(105, 125, 60, 300))
-        # self.checkbox_MP3.setChecked(self.selected_formats["MP3"])
-        # self.checkbox_MP3.toggled.connect(self.update_checkbox_MP3)
-
-        # self.set_open_proxy.currentTextChanged.connect(self.on_combo_changed)
+        # 代理
+        self.open_proxy = QCheckBox("是否使用代理", self.centralwidget)
+        self.open_proxy.setGeometry(QtCore.QRect(10, 122, 100, 30))
+        self.open_proxy.setChecked(self.proxy_conf["open_proxy"])
+        self.open_proxy.toggled.connect(self.save_open_proxy)
 
         # 创建代理下拉选择框
         self.set_proxy_type = QComboBox(self.centralwidget)
-        self.set_proxy_type.setGeometry(QtCore.QRect(165, 125, 75, 30))
-        self.set_proxy_type.addItem("HTTP")  # 添加选项1
-        self.set_proxy_type.addItem("Cosks5")  # 添加选项2
-        self.set_proxy_type.addItem("Cosks4")
-        # self.set_proxy_type.currentTextChanged.connect(self.on_combo_changed)
+        self.set_proxy_type.setGeometry(QtCore.QRect(105, 125, 75, 30))
+        self.set_proxy_type.addItem("http")
+        self.set_proxy_type.addItem("https")
+        self.set_proxy_type.addItem("socks5")
+        self.set_proxy_type.addItem("socks4")
+        self.set_proxy_type.currentTextChanged.connect(self.save_proxy_type)
+        
+        self.proxy_address = QLineEdit(self.centralwidget)
+        self.proxy_address.setGeometry(QtCore.QRect(185, 125, 120, 30))
+        self.proxy_address.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.proxy_address.setPlaceholderText("proxy address")
+        self.proxy_address.editingFinished.connect(self.save_proxy_address)
+
+        self.proxy_port = QLineEdit(self.centralwidget)
+        self.proxy_port.setGeometry(QtCore.QRect(310, 125, 60, 30))
+        self.proxy_port.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.proxy_port.setPlaceholderText("port")
+        self.proxy_port.editingFinished.connect(self.save_proxy_port)
 
 
         # 选择性下载
@@ -203,52 +215,66 @@ class INDEX(QMainWindow):
 
         self.set_data()
 
+    def save_open_proxy(self):
+        self.conf.write_open_proxy('True' if self.open_proxy.isChecked() else 'False')
+
     def update_checkbox_MP3(self):
+        self.selected_formats['MP3'] = not self.selected_formats['MP3']  # 更新字典中的值
         if self.selected_formats['MP3']:
-            self.conf.write_downfile_type('MP3', 'false')
-        else:
             self.conf.write_downfile_type('MP3', 'true')
+        else:
+            self.conf.write_downfile_type('MP3', 'false')
+
     def update_checkbox_MP4(self):
+        self.selected_formats['MP4'] = not self.selected_formats['MP4']
         if self.selected_formats['MP4']:
             self.conf.write_downfile_type('MP4', 'false')
         else:
             self.conf.write_downfile_type('MP4', 'true')
     def update_checkbox_FLAC(self):
+        self.selected_formats['FLAC'] = not self.selected_formats['FLAC']
         if self.selected_formats['FLAC']:
             self.conf.write_downfile_type('FLAC', 'false')
         else:
             self.conf.write_downfile_type('FLAC', 'true')
     def update_checkbox_WAV(self):
+        self.selected_formats['WAV'] = not self.selected_formats['WAV']
         if self.selected_formats['WAV']:
             self.conf.write_downfile_type('WAV', 'false')
         else:
             self.conf.write_downfile_type('WAV', 'true')
     def update_checkbox_JPG(self):
+        self.selected_formats['JPG'] = not self.selected_formats['JPG']
         if self.selected_formats['JPG']:
             self.conf.write_downfile_type('JPG', 'false')
         else:
             self.conf.write_downfile_type('JPG', 'true')
     def update_checkbox_PNG(self):
+        self.selected_formats['PNG'] = not self.selected_formats['PNG']
         if self.selected_formats['PNG']:
             self.conf.write_downfile_type('PNG', 'false')
         else:
             self.conf.write_downfile_type('PNG', 'true')
     def update_checkbox_PDF(self):
+        self.selected_formats['PDF'] = not self.selected_formats['PDF']
         if self.selected_formats['PDF']:
             self.conf.write_downfile_type('PDF', 'false')
         else:
             self.conf.write_downfile_type('PDF', 'true')
     def update_checkbox_TXT(self):
+        self.selected_formats['TXT'] = not self.selected_formats['TXT']
         if self.selected_formats['TXT']:
             self.conf.write_downfile_type('TXT', 'false')
         else:
             self.conf.write_downfile_type('TXT', 'true')
     def update_checkbox_VTT(self):
+        self.selected_formats['VTT'] = not self.selected_formats['VTT']
         if self.selected_formats['VTT']:
             self.conf.write_downfile_type('VTT', 'false')
         else:
             self.conf.write_downfile_type('VTT', 'true')
     def update_checkbox_LCR(self):
+        self.selected_formats['LCR'] = not self.selected_formats['LCR']
         if self.selected_formats['LRC']:
             self.conf.write_downfile_type('LRC', 'false')
         else:
@@ -256,12 +282,30 @@ class INDEX(QMainWindow):
 
     def save_speed_limit(self):
         speed_limit = self.speed_limit.text()
-        pattern = r'^\d*\.?\d*$'  # 修改正则表达式
-        if bool(re.match(pattern, speed_limit)):
-            if re.match(r'^\d*\.?\d+$', speed_limit):
-                self.conf.write_speed_limit(speed_limit)
+        if re.match(r'^\d*\.?\d+$', speed_limit):  # 直接检查是否为小数
+            self.conf.write_speed_limit(speed_limit)
         else:
             self.show_message_box('请输入小数', 'program')
+
+    def save_proxy_address(self):
+        address = self.proxy_address.text()
+        if address:
+            try:
+                ipaddress.ip_address(address)
+                self.conf.write_proxy_host(address)
+            except ValueError:
+                self.show_message_box('ip地址不合法',  'program')
+
+    def save_proxy_port(self):
+        port = self.proxy_port.text()
+        if port:
+            try:
+                if int(port) > 65535 or int(port) < 0:
+                    self.show_message_box('请输入 0 - 65535', 'program')
+                else:
+                    self.conf.write_proxy_port(port)
+            except:
+                self.show_message_box('请输入整数', 'program')
 
     def save_max_retries(self):
         max_retries = self.max_retries.text()
@@ -274,21 +318,24 @@ class INDEX(QMainWindow):
 
     def save_timeout(self):
         timeout = self.timeout.text()
-        pattern = r'^\d+$'  # 修改正则表达式
-        if bool(re.match(pattern, timeout)):
-            if re.match(r'^\d+$', timeout):
-                self.conf.write_timeout(timeout)
+        if re.match(r'^\d+$', timeout):  # 直接检查是否为整数
+            self.conf.write_timeout(timeout)
         else:
             self.show_message_box('请输入整数', 'program')
 
         self.conf.write_timeout(timeout)
 
-    def on_combo_changed(self, text):
-        self.conf.write_name(text)
+    def set_folder_for_name(self, text):
+        self.conf.write_folder_for_name(text)
+
+    def save_proxy_type(self, text):
+        self.conf.write_proxy_type(text)
+
 
     def set_data(self):
         user_info = self.conf.read_asmr_user()
         down_conf = self.conf.read_download_conf()
+        # proxy_conf = self.conf.read_proxy_conf()
         speed_limit = str(down_conf['speed_limit'])
         self.user_name.setText(user_info["username"])
         self.password.setText(user_info["passwd"])
@@ -300,6 +347,18 @@ class INDEX(QMainWindow):
         folder_for_name = self.conf.read_name()
         if folder_for_name == "标题命名":
             self.folder_name_type_combo_box.setCurrentIndex(1)
+
+        self.proxy_port.setText(str(self.proxy_conf['port']))
+        self.proxy_address.setText(str(self.proxy_conf['host']))
+        if self.proxy_conf['proxy_type'] == 'http':
+            self.set_proxy_type.setCurrentIndex(0)
+        elif self.proxy_conf['proxy_type'] == 'https':
+            self.set_proxy_type.setCurrentIndex(1)
+        elif self.proxy_conf['proxy_type'] == 'socks5':
+            self.set_proxy_type.setCurrentIndex(2)
+        elif self.proxy_conf['proxy_type'] == 'socks4':
+            self.set_proxy_type.setCurrentIndex(3)
+
 
     def save_download_path(self):
         download_path = QFileDialog.getExistingDirectory(self, "选择下载路径")
