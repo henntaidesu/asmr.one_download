@@ -228,57 +228,57 @@ class INDEX(QMainWindow):
     def update_checkbox_MP4(self):
         self.selected_formats['MP4'] = not self.selected_formats['MP4']
         if self.selected_formats['MP4']:
-            self.conf.write_downfile_type('MP4', 'false')
-        else:
             self.conf.write_downfile_type('MP4', 'true')
+        else:
+            self.conf.write_downfile_type('MP4', 'false')
     def update_checkbox_FLAC(self):
         self.selected_formats['FLAC'] = not self.selected_formats['FLAC']
         if self.selected_formats['FLAC']:
-            self.conf.write_downfile_type('FLAC', 'false')
-        else:
             self.conf.write_downfile_type('FLAC', 'true')
+        else:
+            self.conf.write_downfile_type('FLAC', 'false')
     def update_checkbox_WAV(self):
         self.selected_formats['WAV'] = not self.selected_formats['WAV']
         if self.selected_formats['WAV']:
-            self.conf.write_downfile_type('WAV', 'false')
-        else:
             self.conf.write_downfile_type('WAV', 'true')
+        else:
+            self.conf.write_downfile_type('WAV', 'false')
     def update_checkbox_JPG(self):
         self.selected_formats['JPG'] = not self.selected_formats['JPG']
         if self.selected_formats['JPG']:
-            self.conf.write_downfile_type('JPG', 'false')
-        else:
             self.conf.write_downfile_type('JPG', 'true')
+        else:
+            self.conf.write_downfile_type('JPG', 'false')
     def update_checkbox_PNG(self):
         self.selected_formats['PNG'] = not self.selected_formats['PNG']
         if self.selected_formats['PNG']:
-            self.conf.write_downfile_type('PNG', 'false')
-        else:
             self.conf.write_downfile_type('PNG', 'true')
+        else:
+            self.conf.write_downfile_type('PNG', 'false')
     def update_checkbox_PDF(self):
         self.selected_formats['PDF'] = not self.selected_formats['PDF']
         if self.selected_formats['PDF']:
-            self.conf.write_downfile_type('PDF', 'false')
-        else:
             self.conf.write_downfile_type('PDF', 'true')
+        else:
+            self.conf.write_downfile_type('PDF', 'false')
     def update_checkbox_TXT(self):
         self.selected_formats['TXT'] = not self.selected_formats['TXT']
         if self.selected_formats['TXT']:
-            self.conf.write_downfile_type('TXT', 'false')
-        else:
             self.conf.write_downfile_type('TXT', 'true')
+        else:
+            self.conf.write_downfile_type('TXT', 'false')
     def update_checkbox_VTT(self):
         self.selected_formats['VTT'] = not self.selected_formats['VTT']
         if self.selected_formats['VTT']:
-            self.conf.write_downfile_type('VTT', 'false')
-        else:
             self.conf.write_downfile_type('VTT', 'true')
-    def update_checkbox_LCR(self):
-        self.selected_formats['LCR'] = not self.selected_formats['LCR']
-        if self.selected_formats['LRC']:
-            self.conf.write_downfile_type('LRC', 'false')
         else:
+            self.conf.write_downfile_type('VTT', 'false')
+    def update_checkbox_LCR(self):
+        self.selected_formats['LRC'] = not self.selected_formats['LRC']
+        if self.selected_formats['LRC']:
             self.conf.write_downfile_type('LRC', 'true')
+        else:
+            self.conf.write_downfile_type('LRC', 'false')
 
     def save_speed_limit(self):
         speed_limit = self.speed_limit.text()
