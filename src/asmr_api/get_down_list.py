@@ -15,7 +15,17 @@ def get_down_list():
     headers = {
         'authorization': f'Bearer {token}'
     }
-    req = requests.get(url, headers=headers).json()
+
+    proxy = conf.read_proxy_conf()
+    if proxy['open_proxy']:
+        proxy_url = {
+            f'http': f'{proxy["proxy_type"]}://{proxy["host"]}:{proxy["port"]}',
+            f'https': f'{proxy["proxy_type"]}://{proxy["host"]}:{proxy["port"]}'
+        }
+    else:
+        proxy_url = None
+
+    req = requests.get(url, headers=headers, proxies=proxy_url).json()
     id_list = []
 
     if req['works']:

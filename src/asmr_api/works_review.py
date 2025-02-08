@@ -22,4 +22,13 @@ def review(work_id, check_DB):
             'work_id': work_id,
         }
 
-    requests.put(url, headers=headers, data=data)
+    proxy = conf.read_proxy_conf()
+    if proxy['open_proxy']:
+        proxy_url = {
+            f'http': f'{proxy["proxy_type"]}://{proxy["host"]}:{proxy["port"]}',
+            f'https': f'{proxy["proxy_type"]}://{proxy["host"]}:{proxy["port"]}'
+        }
+    else:
+        proxy_url = None
+
+    requests.put(url, headers=headers, data=data, proxies=proxy_url)

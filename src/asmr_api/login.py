@@ -13,7 +13,17 @@ def login():
         'name': username,
         'password': passwd,
     }
-    req = requests.post(url, data=data).json()
+
+    proxy = conf.read_proxy_conf()
+    if proxy['open_proxy']:
+        proxy_url = {
+            f'http': f'{proxy["proxy_type"]}://{proxy["host"]}:{proxy["port"]}',
+            f'https': f'{proxy["proxy_type"]}://{proxy["host"]}:{proxy["port"]}'
+        }
+    else:
+        proxy_url = None
+
+    req = requests.post(url, data=data, proxies=proxy_url).json()
 
     try:
         if req['user']['loggedIn']:

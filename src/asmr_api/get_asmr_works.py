@@ -47,6 +47,9 @@ def down_file(url, file_name, stop_event):
 
                 # 设置请求头，支持断点续传
                 headers = {"Range": f"bytes={downloaded_size}-"}
+
+
+
                 with requests.get(url, headers=headers, stream=True, timeout=timeout, proxies=proxy_url) as resp, \
                         open(file_name, "ab") as file, \
                         tqdm(
