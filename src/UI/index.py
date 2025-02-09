@@ -184,10 +184,10 @@ class INDEX(QMainWindow):
         self.checkbox_VTT.setChecked(self.selected_formats["VTT"])
         self.checkbox_VTT.toggled.connect(self.update_checkbox_VTT)
 
-        self.checkbox_VTT = QCheckBox("LRC", self.centralwidget)
-        self.checkbox_VTT.setGeometry(QtCore.QRect(190, 170, 60, 30))
-        self.checkbox_VTT.setChecked(self.selected_formats["LRC"])
-        self.checkbox_VTT.toggled.connect(self.update_checkbox_LCR)
+        self.checkbox_LRC = QCheckBox("LRC", self.centralwidget)
+        self.checkbox_LRC.setGeometry(QtCore.QRect(190, 170, 60, 30))
+        self.checkbox_LRC.setChecked(self.selected_formats["LRC"])
+        self.checkbox_LRC.toggled.connect(self.update_checkbox_LCR)
 
         # 登录按钮
         self.user_conf_save_button = QPushButton("Login", self.centralwidget)
@@ -209,7 +209,7 @@ class INDEX(QMainWindow):
         # 打开下载页面按钮
         self.down_list_page_button = QPushButton("down page", self.centralwidget)
         self.down_list_page_button.setGeometry(QtCore.QRect(280, 200, 80, 30))
-        self.down_list_page_button.clicked.connect(self.down_stop)
+        # self.down_list_page_button.clicked.connect(self.down_stop)
         self.down_list_page_button.setEnabled(False)
 
 
@@ -389,6 +389,30 @@ class INDEX(QMainWindow):
         self.down_start_button.setEnabled(True)
         self.down_list_page_button.setEnabled(False)
 
+        self.proxy_address.setEnabled(True)
+        self.user_name.setEnabled(True)
+        self.password.setEnabled(True)
+        # self.speed_limit.setEnabled(True)
+        self.max_retries.setEnabled(True)
+        self.timeout.setEnabled(True)
+        self.proxy_port.setEnabled(True)
+        self.path_conf_save_button.setEnabled(True)
+        self.user_conf_save_button.setEnabled(True)
+        self.down_path.setEnabled(True)
+        self.folder_name_type_combo_box.setEnabled(True)
+        self.set_proxy_type.setEnabled(True)
+        self.checkbox_MP3.setEnabled(True)
+        self.checkbox_MP4.setEnabled(True)
+        self.checkbox_FLAC.setEnabled(True)
+        self.checkbox_WAV.setEnabled(True)
+        self.checkbox_JPG.setEnabled(True)
+        self.checkbox_PNG.setEnabled(True)
+        self.checkbox_PDF.setEnabled(True)
+        self.checkbox_TXT.setEnabled(True)
+        self.checkbox_VTT.setEnabled(True)
+        self.open_proxy.setEnabled(True)
+
+
     def down_start(self):
         self.download_thread = DownloadThread()
         self.download_thread.download_finished.connect(self.on_download_finished)
@@ -397,6 +421,29 @@ class INDEX(QMainWindow):
         self.down_start_button.setEnabled(False)
         self.down_stop_button.setEnabled(True)
         self.down_list_page_button.setEnabled(True)
+        self.proxy_address.setEnabled(False)
+        self.user_name.setEnabled(False)
+        self.password.setEnabled(False)
+        # self.speed_limit.setEnabled(False)
+        self.max_retries.setEnabled(False)
+        self.timeout.setEnabled(False)
+        self.proxy_port.setEnabled(False)
+        self.path_conf_save_button.setEnabled(False)
+        self.user_conf_save_button.setEnabled(False)
+        self.down_path.setEnabled(False)
+        self.folder_name_type_combo_box.setEnabled(False)
+        self.set_proxy_type.setEnabled(False)
+        self.checkbox_MP3.setEnabled(False)
+        self.checkbox_MP4.setEnabled(False)
+        self.checkbox_FLAC.setEnabled(False)
+        self.checkbox_WAV.setEnabled(False)
+        self.checkbox_JPG.setEnabled(False)
+        self.checkbox_PNG.setEnabled(False)
+        self.checkbox_PDF.setEnabled(False)
+        self.checkbox_TXT.setEnabled(False)
+        self.checkbox_VTT.setEnabled(False)
+        self.open_proxy.setEnabled(False)
+
 
     def down_stop(self):
         if hasattr(self, 'download_thread') and self.download_thread.isRunning():

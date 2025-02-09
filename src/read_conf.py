@@ -70,6 +70,8 @@ class ReadConf:
         download_path = self.config.get('down_conf', 'download_path')
         max_retries = int(self.config.get('down_conf', 'max_retries'))
         timeout = int(self.config.get('down_conf', 'timeout'))
+        min_speed = int(self.config.get('down_conf', 'min_speed'))
+        min_speed_check = int(self.config.get('down_conf', 'min_speed_check'))
         if download_path[1:] == '\\' or download_path[1:] == '/':
             download_path = download_path[:-1]
         if '\\' in download_path:
@@ -79,6 +81,8 @@ class ReadConf:
             'download_path': download_path,
             'max_retries': max_retries,
             'timeout': timeout,
+            'min_speed': min_speed,
+            'min_speed_check': min_speed_check,
         }
 
     def write_speed_limit(self, speed_limit):
@@ -185,6 +189,8 @@ def create_ini_file():
         'max_retries': '10',
         'timeout': '10',
         'download_path': f'C:/Users/{os.getlogin()}/Downloads',
+        'min_speed': '256',
+        'min_speed_check': '30',
     }
 
     # 配置 [user] 部分

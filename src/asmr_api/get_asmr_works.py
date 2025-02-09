@@ -15,8 +15,8 @@ def down_file(url, file_name, stop_event):
     speed_limit = download_conf_data["speed_limit"]
     max_retries = download_conf_data["max_retries"]
     timeout = download_conf_data["timeout"]
-    min_speed = 256 * 1024  # 256 KB/s
-    speed_check_interval = 30  # 每30秒检查一次下载速度
+    min_speed = download_conf_data["min_speed"] * 1024
+    speed_check_interval = download_conf_data["min_speed_check"]
     proxy = conf.read_proxy_conf()
     if proxy['open_proxy']:
         proxy_url = {
@@ -26,7 +26,7 @@ def down_file(url, file_name, stop_event):
     else:
         proxy_url = None
     try:
-        retries = 0
+        retries = 1
         while retries < max_retries:
             try:
                 # 获取文件总大小
@@ -47,8 +47,6 @@ def down_file(url, file_name, stop_event):
 
                 # 设置请求头，支持断点续传
                 headers = {"Range": f"bytes={downloaded_size}-"}
-
-
 
                 with requests.get(url, headers=headers, stream=True, timeout=timeout, proxies=proxy_url) as resp, \
                         open(file_name, "ab") as file, \
@@ -100,18 +98,40 @@ def down_file(url, file_name, stop_event):
                 print(f"下载超时或连接错误，正在重试 ({retries}/{max_retries})...")
                 time.sleep(2)
 
+            except IncompleteRead as e:
+                retries += 1
+                print(f"连接中断，数据不完整，正在重试 ({retries}/{max_retries})...")
+                try:
+                    # 删除不完整的文件
+                    if os.path.exists(file_name):
+                        os.remove(file_name)
+                        print("已删除不完整的文件")
+                except Exception as err:
+                    print(f"删除文件失败: {err}")
+                time.sleep(2)
+
+            except Exception as e:
+                if type(e).__name__ == 'ChunkedEncodingError':
+                    print(f'文件校验出错，正在重试 ({retries}/{max_retries})...')
+                    retries += 1
+                    print(file_name)
+                    if retries > max_retries - 2:
+                        return False, f'{file_name},文件校验错误，建议前往网页点击一下对应项目加载，加载出后返回程序重新下载'
+                    try:
+                        # 确保文件关闭后再删除
+                        if os.path.exists(file_name):
+                            os.remove(file_name)
+                            print("文件已删除")
+                    except Exception as err:
+                        print(f"删除文件失败: {err}")
+                    time.sleep(2)
+
         print("下载失败，已达到最大重试次数。")
         return False, '下载失败，已达到最大重试次数。'
-
-    except IncompleteRead:
-        if os.path.exists(file_name):
-            os.remove(file_name)
-        down_file(url, file_name, stop_event)
 
     except Exception as e:
         print(f"下载出错: {e}")
         print(type(e).__name__)
-
         return False, e
 
 
