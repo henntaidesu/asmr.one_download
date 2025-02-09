@@ -4,7 +4,7 @@ import time
 import requests
 from tqdm import tqdm
 from src.read_conf import ReadConf
-
+from http.client import IncompleteRead
 
 def down_file(url, file_name, stop_event):
     """
@@ -103,13 +103,14 @@ def down_file(url, file_name, stop_event):
         print("下载失败，已达到最大重试次数。")
         return False, '下载失败，已达到最大重试次数。'
 
+    except IncompleteRead:
+        if os.path.exists(file_name):
+            os.remove(file_name)
+        down_file(url, file_name, stop_event)
+
     except Exception as e:
         print(f"下载出错: {e}")
         print(type(e).__name__)
-        if type(e).__name__ == "ChunkedEncodingError":
-            if os.path.exists(file_name):
-                os.remove(file_name)
-                down_file(url, file_name, stop_event)
 
         return False, e
 

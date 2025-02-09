@@ -124,7 +124,7 @@ class INDEX(QMainWindow):
         self.set_proxy_type.addItem("socks5")
         self.set_proxy_type.addItem("socks4")
         self.set_proxy_type.currentTextChanged.connect(self.save_proxy_type)
-        
+
         self.proxy_address = QLineEdit(self.centralwidget)
         self.proxy_address.setGeometry(QtCore.QRect(185, 125, 120, 30))
         self.proxy_address.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -207,10 +207,10 @@ class INDEX(QMainWindow):
         self.down_stop_button.clicked.connect(self.down_stop)
         self.down_stop_button.setEnabled(False)
         # 打开下载页面按钮
-        self.down_stop_button = QPushButton("down page", self.centralwidget)
-        self.down_stop_button.setGeometry(QtCore.QRect(280, 200, 80, 30))
-        self.down_stop_button.clicked.connect(self.down_stop)
-        self.down_stop_button.setEnabled(False)
+        self.down_list_page_button = QPushButton("down page", self.centralwidget)
+        self.down_list_page_button.setGeometry(QtCore.QRect(280, 200, 80, 30))
+        self.down_list_page_button.clicked.connect(self.down_stop)
+        self.down_list_page_button.setEnabled(False)
 
 
         self.set_data()
@@ -387,6 +387,7 @@ class INDEX(QMainWindow):
         msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
         msg.exec()
         self.down_start_button.setEnabled(True)
+        self.down_list_page_button.setEnabled(False)
 
     def down_start(self):
         self.download_thread = DownloadThread()
@@ -395,6 +396,7 @@ class INDEX(QMainWindow):
         self.download_thread.start()
         self.down_start_button.setEnabled(False)
         self.down_stop_button.setEnabled(True)
+        self.down_list_page_button.setEnabled(True)
 
     def down_stop(self):
         if hasattr(self, 'download_thread') and self.download_thread.isRunning():
