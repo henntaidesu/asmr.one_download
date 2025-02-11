@@ -63,6 +63,7 @@ def down_file(url, file_name, stop_event):
                     bytes_downloaded_since_last_check = 0
 
                     for chunk in resp.iter_content(chunk_size=1024):
+                        # time.sleep(0.5)
                         if stop_event.is_set():
                             print("检测到停止信号，终止下载")
                             return False, 'INFO'
@@ -70,7 +71,6 @@ def down_file(url, file_name, stop_event):
                             file.write(chunk)
                             bar.update(len(chunk))
                             bytes_downloaded_since_last_check += len(chunk)
-
                             # 限制下载速度
                             elapsed_time = time.time() - start_time
                             if elapsed_time < 1 and bytes_downloaded_since_last_check >= speed_limit * 1024 * 1024:
@@ -188,87 +188,87 @@ def get_asmr_downlist_api(stop_event):
     from src.asmr_api.works_review import review
     from src.datebase_execution import MySQLDB
 
-    works_list = get_down_list()
     conf = ReadConf()
     folder_flag = conf.read_name()
     selected_formats = conf.read_downfile_type()
     check_DB = conf.check_DB()
 
-    if not works_list:
-        print("未获取到作品列表")
-        return
-
-    for work in works_list:
-        if stop_event.is_set():
-            print("检测到停止信号，终止下载")
+    while True:
+        works_list = get_down_list()
+        if not works_list:
+            print("未获取到作品列表")
             return
-
-        download_conf_data = conf.read_download_conf()
-        download_path = download_conf_data["download_path"]
-        keyword = work["id"]
-        work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', work["title"])
-
-        # 根据配置调整文件夹命名方式
-        if folder_flag == 'RJ号命名':
-            if len(str(keyword)) > 6:
-                work_title = f'RJ{keyword:08d}'
-            else:
-                work_title = f'RJ{keyword:06d}'
-
-        try:
-            # 检查是否开启数据库
-            if check_DB:
-                if len(str(keyword)) > 6:
-                    rj_number = f'RJ{keyword:08d}'
-                else:
-                    rj_number = f'RJ{keyword:06d}'
-
-                sql = f"SELECT work_state FROM `works` WHERE work_id = '{rj_number}'"
-                DB_flag = int(MySQLDB().select(sql)[1][0][0])
-                if DB_flag < 0:
-                    print(f"作品已下载: {rj_number}")
-                    review(keyword, check_DB)
-                    continue
-        except Exception as e:
-            print(f"数据库检查出错: {e}")
-
-        url = f"https://api.asmr-200.com/api/tracks/{keyword}?v=1"
-        req = requests.get(url).json()
-
-        # 解析下载信息
-        results = parse_req(req, work_title, download_path)
-        for idx, item in enumerate(results, start=1):
+        for work in works_list:
             if stop_event.is_set():
                 print("检测到停止信号，终止下载")
                 return
 
-            file_title = item['title']
-            file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_title)
-            file_type = file_title[file_title.rfind('.') + 1:].upper()
-            if not selected_formats.get(file_type, False):
-                print(f"跳过文件: {file_title}")
-                continue
+            download_conf_data = conf.read_download_conf()
+            download_path = download_conf_data["download_path"]
+            keyword = work["id"]
+            work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', work["title"])
 
-            print(f"-" * 80)
-            print(f"正在下载： {work_title} ({idx}/{len(results)})")
-            print(f"文件类型： {item['file_type']}")
-            print(f"文件名称： {item['title']}")
+            # 根据配置调整文件夹命名方式
+            if folder_flag == 'RJ号命名':
+                if len(str(keyword)) > 6:
+                    work_title = f'RJ{keyword:08d}'
+                else:
+                    work_title = f'RJ{keyword:06d}'
 
-            file_name = os.path.join(item["download_path"], file_title)
+            try:
+                # 检查是否开启数据库
+                if check_DB:
+                    if len(str(keyword)) > 6:
+                        rj_number = f'RJ{keyword:08d}'
+                    else:
+                        rj_number = f'RJ{keyword:06d}'
 
-            if not os.path.exists(item["download_path"]):
-                os.makedirs(item["download_path"], exist_ok=True)
+                    sql = f"SELECT work_state FROM `works` WHERE work_id = '{rj_number}'"
+                    DB_flag = int(MySQLDB().select(sql)[1][0][0])
+                    if DB_flag < 0:
+                        print(f"作品已下载: {rj_number}")
+                        review(keyword, check_DB)
+                        continue
+            except Exception as e:
+                print(f"数据库检查出错: {e}")
 
-            success, message = down_file(item['media_download_url'], file_name, stop_event)
-            if not success:
-                print(f"下载失败: {file_title} \n {message}")
-                return success, message
+            url = f"https://api.asmr-200.com/api/tracks/{keyword}?v=1"
+            req = requests.get(url).json()
 
-            time.sleep(0.5)
+            # 解析下载信息
+            results = parse_req(req, work_title, download_path)
+            for idx, item in enumerate(results, start=1):
+                if stop_event.is_set():
+                    print("检测到停止信号，终止下载")
+                    return
 
-        # 更新数据库状态
-        if check_DB:
-            sql = f"UPDATE `works` SET `work_state` = '-1' WHERE `work_id` = '{rj_number}';"
-            MySQLDB().update(sql)
+                file_title = item['title']
+                file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_title)
+                file_type = file_title[file_title.rfind('.') + 1:].upper()
+                if not selected_formats.get(file_type, False):
+                    print(f"跳过文件: {file_title}")
+                    continue
 
-        review(keyword, check_DB)
+                print(f"-" * 80)
+                print(f"正在下载： {work_title} ({idx}/{len(results)})")
+                print(f"文件类型： {item['file_type']}")
+                print(f"文件名称： {item['title']}")
+
+                file_name = os.path.join(item["download_path"], file_title)
+
+                if not os.path.exists(item["download_path"]):
+                    os.makedirs(item["download_path"], exist_ok=True)
+
+                success, message = down_file(item['media_download_url'], file_name, stop_event)
+                if not success:
+                    print(f"下载失败: {file_title} \n {message}")
+                    return success, message
+
+                time.sleep(0.5)
+
+            # 更新数据库状态
+            if check_DB:
+                sql = f"UPDATE `works` SET `work_state` = '-1' WHERE `work_id` = '{rj_number}';"
+                MySQLDB().update(sql)
+
+            review(keyword, check_DB)

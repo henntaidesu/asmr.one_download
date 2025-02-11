@@ -410,6 +410,7 @@ class INDEX(QMainWindow):
         self.checkbox_PDF.setEnabled(True)
         self.checkbox_TXT.setEnabled(True)
         self.checkbox_VTT.setEnabled(True)
+        self.checkbox_LRC.setEnabled(True)
         self.open_proxy.setEnabled(True)
 
 
@@ -442,6 +443,7 @@ class INDEX(QMainWindow):
         self.checkbox_PDF.setEnabled(False)
         self.checkbox_TXT.setEnabled(False)
         self.checkbox_VTT.setEnabled(False)
+        self.checkbox_LRC.setEnabled(False)
         self.open_proxy.setEnabled(False)
 
 
