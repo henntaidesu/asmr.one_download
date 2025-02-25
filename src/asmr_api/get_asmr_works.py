@@ -3,6 +3,7 @@ import os
 import time
 import requests
 from tqdm import tqdm
+# from src.UI.index import INDEX
 from src.read_conf import ReadConf
 from http.client import IncompleteRead
 
@@ -83,7 +84,7 @@ def down_file(url, file_name, stop_event):
                             if current_time - last_check_time >= speed_check_interval:
                                 current_speed = bytes_downloaded_since_last_check / (current_time - last_check_time)
                                 if current_speed < min_speed:
-                                    print(f"下载速度低于256KB/s ({current_speed / 1024:.2f} KB/s 正在重试 ({retries}/{max_retries})，重启下载...")
+                                    print(f"下载速度低于{min_speed}KB/s ({current_speed / 1024:.2f} KB/s 正在重试 ({retries}/{max_retries})，重启下载...")
                                     retries += 1
                                     break
 
@@ -196,12 +197,14 @@ def get_asmr_downlist_api(stop_event):
     while True:
         works_list = get_down_list()
         if not works_list:
-            print("未获取到作品列表")
-            return
+            print("未获取到作品列表 休眠24小时")
+            time.sleep(3600 * 24)
+            continue
+            # return False, "未获取到作品列表"
         for work in works_list:
             if stop_event.is_set():
                 print("检测到停止信号，终止下载")
-                return
+                return False, "用户停止下载"
 
             download_conf_data = conf.read_download_conf()
             download_path = download_conf_data["download_path"]
@@ -214,6 +217,18 @@ def get_asmr_downlist_api(stop_event):
                     work_title = f'RJ{keyword:08d}'
                 else:
                     work_title = f'RJ{keyword:06d}'
+
+            elif folder_flag == 'RJ号 标题命名':
+                if len(str(keyword)) > 6:
+                    work_title = f'RJ{keyword:08d} {work_title}'
+                else:
+                    work_title = f'RJ{keyword:06d} {work_title}'
+
+            elif folder_flag == 'RJ号_标题命名':
+                if len(str(keyword)) > 6:
+                    work_title = f'RJ{keyword:08d}_{work_title}'
+                else:
+                    work_title = f'RJ{keyword:06d}_{work_title}'
 
             try:
                 # 检查是否开启数据库
@@ -240,7 +255,7 @@ def get_asmr_downlist_api(stop_event):
             for idx, item in enumerate(results, start=1):
                 if stop_event.is_set():
                     print("检测到停止信号，终止下载")
-                    return
+                    return True, "用户停止下载"
 
                 file_title = item['title']
                 file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_title)

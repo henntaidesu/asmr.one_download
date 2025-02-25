@@ -80,12 +80,12 @@ class INDEX(QMainWindow):
 
         # 最大重试次数
         self.max_retries = QLineEdit(self.centralwidget)
-        self.max_retries.setGeometry(QtCore.QRect(205, 90, 60, 30))
+        self.max_retries.setGeometry(QtCore.QRect(215, 90, 60, 30))
         self.max_retries.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.max_retries.setPlaceholderText("max retries")
         self.max_retries.editingFinished.connect(self.save_max_retries)
         self.max_retries_label = QLabel("次", self.centralwidget)
-        self.max_retries_label.setGeometry(QtCore.QRect(260, 90, 30, 30))
+        self.max_retries_label.setGeometry(QtCore.QRect(270, 90, 30, 30))
         self.max_retries_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         #下载超时时间
@@ -105,9 +105,11 @@ class INDEX(QMainWindow):
 
         # 创建下拉选择框
         self.folder_name_type_combo_box = QComboBox(self.centralwidget)
-        self.folder_name_type_combo_box.setGeometry(QtCore.QRect(105, 90, 90, 30))
-        self.folder_name_type_combo_box.addItem("RJ号命名")  # 添加选项1
-        self.folder_name_type_combo_box.addItem("标题命名")  # 添加选项2
+        self.folder_name_type_combo_box.setGeometry(QtCore.QRect(105, 90, 100, 30))
+        self.folder_name_type_combo_box.addItem("RJ号命名")
+        self.folder_name_type_combo_box.addItem("标题命名")
+        self.folder_name_type_combo_box.addItem("RJ号 标题命名")
+        self.folder_name_type_combo_box.addItem("RJ号_标题命名")
         self.folder_name_type_combo_box.currentTextChanged.connect(self.set_folder_for_name)
 
         # 代理
@@ -347,7 +349,10 @@ class INDEX(QMainWindow):
         folder_for_name = self.conf.read_name()
         if folder_for_name == "标题命名":
             self.folder_name_type_combo_box.setCurrentIndex(1)
-
+        elif folder_for_name == "RJ号 标题命名":
+            self.folder_name_type_combo_box.setCurrentIndex(2)
+        elif folder_for_name == "RJ号_标题命名":
+            self.folder_name_type_combo_box.setCurrentIndex(2)
         self.proxy_port.setText(str(self.proxy_conf['port']))
         self.proxy_address.setText(str(self.proxy_conf['host']))
         if self.proxy_conf['proxy_type'] == 'http':
