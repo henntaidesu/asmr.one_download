@@ -28,6 +28,7 @@ def down_file(url, file_name, stop_event):
         proxy_url = None
     try:
         retries = 1
+        file_chick = 1
         while retries < max_retries:
             try:
                 # 获取文件总大小
@@ -115,8 +116,10 @@ def down_file(url, file_name, stop_event):
                 if type(e).__name__ == 'ChunkedEncodingError':
                     print(f'文件校验出错，正在重试 ({retries}/{max_retries})...')
                     retries += 1
+                    file_chick += 1
+
                     print(file_name)
-                    if retries > max_retries - 2:
+                    if file_chick > 4:
                         return False, f'{file_name},文件校验错误，建议前往网页点击一下对应项目加载，加载出后返回程序重新下载'
                     try:
                         # 确保文件关闭后再删除
