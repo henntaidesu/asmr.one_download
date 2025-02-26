@@ -244,7 +244,7 @@ def create_ini_file():
     }
 
     config['mirror_site'] = {
-        'site_address': 'Original',
+        'site_source': 'Original',
     }
 
     # 将配置写入文件

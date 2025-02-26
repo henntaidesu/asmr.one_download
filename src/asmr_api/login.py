@@ -8,7 +8,18 @@ def login():
     data = conf.read_asmr_user()
     username = data['username']
     passwd = data['passwd']
-    url = 'https://api.asmr.one/api/auth/me'
+
+    website_course = conf.read_website_course()
+    if website_course == 'Original':
+        web_site = f'asmr.one'
+    elif website_course == 'Mirror-1':
+        web_site = 'asmr-100.com'
+    elif website_course == 'Mirror-2':
+        web_site = 'asmr-200.com'
+    elif website_course == 'Mirror-3':
+        web_site = 'asmr-300.com'
+
+    url = f'https://api.{web_site}/api/auth/me'
     data = {
         'name': username,
         'password': passwd,

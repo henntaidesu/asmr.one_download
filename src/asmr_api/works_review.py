@@ -4,7 +4,17 @@ from src.read_conf import ReadConf
 
 def review(work_id, check_DB):
     conf = ReadConf()
-    url = f'https://api.asmr.one/api/review'
+
+    website_course = conf.read_website_course()
+    if website_course == 'Original':
+        web_site = f'asmr.one'
+    elif website_course == 'Mirror-1':
+        web_site = 'asmr-100.com'
+    elif website_course == 'Mirror-2':
+        web_site = 'asmr-200.com'
+    elif website_course == 'Mirror-3':
+        web_site = 'asmr-300.com'
+    url = f'https://api.{web_site}/api/review'
 
     user_data = conf.read_asmr_user()
     token = user_data['token']

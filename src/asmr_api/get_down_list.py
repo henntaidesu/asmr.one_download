@@ -5,10 +5,21 @@ from src.read_conf import ReadConf
 def get_down_list():
     conf = ReadConf()
     check_DB = conf.check_DB()
+
+    website_course = conf.read_website_course()
+    if website_course == 'Original':
+        web_site = f'asmr.one'
+    elif website_course == 'Mirror-1':
+        web_site = 'asmr-100.com'
+    elif website_course == 'Mirror-2':
+        web_site = 'asmr-200.com'
+    elif website_course == 'Mirror-3':
+        web_site = 'asmr-300.com'
+
     if check_DB:
-        url = f'https://api.asmr.one/api/review?order=updated_at&sort=desc&page=1&filter=listening'
+        url = f'https://api.{web_site}/api/review?order=updated_at&sort=desc&page=1&filter=listening'
     else:
-        url = f'https://api.asmr.one/api/review?order=updated_at&sort=desc&page=1&filter=marked'
+        url = f'https://api.{web_site}/api/review?order=updated_at&sort=desc&page=1&filter=marked'
 
     user_data = conf.read_asmr_user()
     token = user_data['token']
