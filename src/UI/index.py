@@ -150,7 +150,7 @@ class INDEX(QMainWindow):
         self.file_download_source.addItem("Mirror-1")
         self.file_download_source.addItem("Mirror-2")
         self.file_download_source.addItem("Mirror-3")
-        self.file_download_source.currentTextChanged.connect(self.set_folder_for_name)
+        self.file_download_source.currentTextChanged.connect(self.set_file_download_source)
 
         # 选择性下载
 

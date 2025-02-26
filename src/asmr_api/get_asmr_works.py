@@ -202,10 +202,10 @@ def get_asmr_downlist_api(stop_event):
     while True:
         works_list = get_down_list()
         if not works_list:
-            print("未获取到作品列表 休眠24小时")
-            time.sleep(3600 * 24)
-            continue
-            # return False, "未获取到作品列表"
+            # print("未获取到作品列表 休眠24小时")
+            # time.sleep(3600 * 24)
+            # continue
+            return False, "未获取到作品列表"
         for work in works_list:
             if stop_event.is_set():
                 print("检测到停止信号，终止下载")
