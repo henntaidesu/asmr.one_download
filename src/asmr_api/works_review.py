@@ -4,7 +4,7 @@ from src.read_conf import ReadConf
 
 def review(work_id, check_DB):
     conf = ReadConf()
-    url = f'https://api.asmr-200.com/api/review'
+    url = f'https://api.asmr.one/api/review'
 
     user_data = conf.read_asmr_user()
     token = user_data['token']

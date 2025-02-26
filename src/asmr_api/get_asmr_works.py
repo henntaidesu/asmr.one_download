@@ -155,7 +155,8 @@ def collect_audio_info(node, base_path, parent_folder=None):
                 results.extend(collect_audio_info(child, new_base_path, node_title))
         else:
             # 如果是文件，提取音频信息
-            media_url = node.get("mediaStreamUrl") or node.get("mediaDownloadUrl")
+            # media_url = node.get("mediaStreamUrl") or node.get("mediaDownloadUrl")
+            media_url = node.get("mediaDownloadUrl")
             # if parent_folder:
             #     parent_folder = parent_folder.re.sub(r'[\/\\:\*\?\<\>\|]', '-', parent_folder)
             results.append({
@@ -250,7 +251,7 @@ def get_asmr_downlist_api(stop_event):
             except Exception as e:
                 print(f"数据库检查出错: {e}")
 
-            url = f"https://api.asmr-200.com/api/tracks/{keyword}?v=1"
+            url = f"https://api.asmr.one/api/tracks/{keyword}?v=1"
             req = requests.get(url).json()
 
             # 解析下载信息

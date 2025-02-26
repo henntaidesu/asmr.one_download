@@ -8,7 +8,7 @@ def login():
     data = conf.read_asmr_user()
     username = data['username']
     passwd = data['passwd']
-    url = 'https://api.asmr-200.com/api/auth/me'
+    url = 'https://api.asmr.one/api/auth/me'
     data = {
         'name': username,
         'password': passwd,
