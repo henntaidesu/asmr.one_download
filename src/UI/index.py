@@ -50,7 +50,7 @@ class INDEX(QMainWindow):
 
         # 创建界面组件
         self.setWindowTitle("ASMR_download")
-        self.setFixedSize(380, 250)
+        self.setFixedSize(380, 300)
 
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
@@ -139,55 +139,69 @@ class INDEX(QMainWindow):
         self.proxy_port.setPlaceholderText("port")
         self.proxy_port.editingFinished.connect(self.save_proxy_port)
 
+        # 下载源
+        self.max_retries_label = QLabel("下载源", self.centralwidget)
+        self.max_retries_label.setGeometry(QtCore.QRect(10, 160, 35, 30))
+        self.max_retries_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        self.file_download_source = QComboBox(self.centralwidget)
+        self.file_download_source.setGeometry(QtCore.QRect(70, 160, 100, 30))
+        self.file_download_source.addItem("Original")
+        self.file_download_source.addItem("Mirror-1")
+        self.file_download_source.addItem("Mirror-2")
+        self.file_download_source.addItem("Mirror-3")
+        self.file_download_source.currentTextChanged.connect(self.set_folder_for_name)
 
         # 选择性下载
+
+
         self.checkbox_MP3 = QCheckBox("MP3", self.centralwidget)
-        self.checkbox_MP3.setGeometry(QtCore.QRect(10, 150, 60, 30))
+        self.checkbox_MP3.setGeometry(QtCore.QRect(10, 190, 60, 30))
         self.checkbox_MP3.setChecked(self.selected_formats["MP3"])
         self.checkbox_MP3.toggled.connect(self.update_checkbox_MP3)
 
         self.checkbox_MP4 = QCheckBox("MP4", self.centralwidget)
-        self.checkbox_MP4.setGeometry(QtCore.QRect(70, 150, 60, 30))
+        self.checkbox_MP4.setGeometry(QtCore.QRect(70, 190, 60, 30))
         self.checkbox_MP4.setChecked(self.selected_formats["MP4"])
         self.checkbox_MP4.toggled.connect(self.update_checkbox_MP4)
 
         self.checkbox_FLAC = QCheckBox("FLAC", self.centralwidget)
-        self.checkbox_FLAC.setGeometry(QtCore.QRect(130, 150, 60, 30))
+        self.checkbox_FLAC.setGeometry(QtCore.QRect(130, 190, 60, 30))
         self.checkbox_FLAC.setChecked(self.selected_formats["FLAC"])
         self.checkbox_FLAC.toggled.connect(self.update_checkbox_FLAC)
 
         self.checkbox_WAV = QCheckBox("WAV", self.centralwidget)
-        self.checkbox_WAV.setGeometry(QtCore.QRect(190, 150, 60, 30))
+        self.checkbox_WAV.setGeometry(QtCore.QRect(190, 190, 60, 30))
         self.checkbox_WAV.setChecked(self.selected_formats["WAV"])
         self.checkbox_WAV.toggled.connect(self.update_checkbox_WAV)
 
         self.checkbox_JPG = QCheckBox("JPG", self.centralwidget)
-        self.checkbox_JPG.setGeometry(QtCore.QRect(250, 150, 60, 30))
+        self.checkbox_JPG.setGeometry(QtCore.QRect(250, 190, 60, 30))
         self.checkbox_JPG.setChecked(self.selected_formats["JPG"])
         self.checkbox_JPG.toggled.connect(self.update_checkbox_JPG)
 
         self.checkbox_PNG = QCheckBox("PNG", self.centralwidget)
-        self.checkbox_PNG.setGeometry(QtCore.QRect(310, 150, 60, 30))
+        self.checkbox_PNG.setGeometry(QtCore.QRect(310, 190, 60, 30))
         self.checkbox_PNG.setChecked(self.selected_formats["PNG"])
         self.checkbox_PNG.toggled.connect(self.update_checkbox_PNG)
 
         self.checkbox_PDF = QCheckBox("PDF", self.centralwidget)
-        self.checkbox_PDF.setGeometry(QtCore.QRect(10, 170, 60, 30))
+        self.checkbox_PDF.setGeometry(QtCore.QRect(10, 210, 60, 30))
         self.checkbox_PDF.setChecked(self.selected_formats["PDF"])
         self.checkbox_PDF.toggled.connect(self.update_checkbox_PDF)
 
         self.checkbox_TXT = QCheckBox("TXT", self.centralwidget)
-        self.checkbox_TXT.setGeometry(QtCore.QRect(70, 170, 60, 30))
+        self.checkbox_TXT.setGeometry(QtCore.QRect(70, 210, 60, 30))
         self.checkbox_TXT.setChecked(self.selected_formats["TXT"])
         self.checkbox_TXT.toggled.connect(self.update_checkbox_TXT)
 
         self.checkbox_VTT = QCheckBox("VTT", self.centralwidget)
-        self.checkbox_VTT.setGeometry(QtCore.QRect(130, 170, 60, 30))
+        self.checkbox_VTT.setGeometry(QtCore.QRect(130, 210, 60, 30))
         self.checkbox_VTT.setChecked(self.selected_formats["VTT"])
         self.checkbox_VTT.toggled.connect(self.update_checkbox_VTT)
 
         self.checkbox_LRC = QCheckBox("LRC", self.centralwidget)
-        self.checkbox_LRC.setGeometry(QtCore.QRect(190, 170, 60, 30))
+        self.checkbox_LRC.setGeometry(QtCore.QRect(190, 210, 60, 30))
         self.checkbox_LRC.setChecked(self.selected_formats["LRC"])
         self.checkbox_LRC.toggled.connect(self.update_checkbox_LCR)
 
@@ -201,16 +215,16 @@ class INDEX(QMainWindow):
         self.path_conf_save_button.clicked.connect(self.save_download_path)
         # 开始下载按钮
         self.down_start_button = QPushButton("Start", self.centralwidget)
-        self.down_start_button.setGeometry(QtCore.QRect(10, 200, 80, 30))
+        self.down_start_button.setGeometry(QtCore.QRect(10, 250, 80, 30))
         self.down_start_button.clicked.connect(self.down_start)
         # 停止下载按钮
         self.down_stop_button = QPushButton("Stop", self.centralwidget)
-        self.down_stop_button.setGeometry(QtCore.QRect(100, 200, 80, 30))
+        self.down_stop_button.setGeometry(QtCore.QRect(100, 250, 80, 30))
         self.down_stop_button.clicked.connect(self.down_stop)
         self.down_stop_button.setEnabled(False)
         # 打开下载页面按钮
         self.down_list_page_button = QPushButton("down page", self.centralwidget)
-        self.down_list_page_button.setGeometry(QtCore.QRect(280, 200, 80, 30))
+        self.down_list_page_button.setGeometry(QtCore.QRect(280, 250, 80, 30))
         # self.down_list_page_button.clicked.connect(self.down_stop)
         self.down_list_page_button.setEnabled(False)
 
@@ -330,6 +344,10 @@ class INDEX(QMainWindow):
     def set_folder_for_name(self, text):
         self.conf.write_folder_for_name(text)
 
+    def set_file_download_source(self, text):
+        self.conf.write_website_course(text)
+
+
     def save_proxy_type(self, text):
         self.conf.write_proxy_type(text)
 
@@ -339,6 +357,7 @@ class INDEX(QMainWindow):
         down_conf = self.conf.read_download_conf()
         # proxy_conf = self.conf.read_proxy_conf()
         speed_limit = str(down_conf['speed_limit'])
+        website_course = self.conf.read_website_course()
         self.user_name.setText(user_info["username"])
         self.password.setText(user_info["passwd"])
         self.speed_limit.setText(speed_limit)
@@ -363,7 +382,14 @@ class INDEX(QMainWindow):
             self.set_proxy_type.setCurrentIndex(2)
         elif self.proxy_conf['proxy_type'] == 'socks4':
             self.set_proxy_type.setCurrentIndex(3)
-
+        if website_course == 'Original':
+            self.file_download_source.setCurrentIndex(0)
+        elif website_course == 'Mirror-1':
+            self.file_download_source.setCurrentIndex(1)
+        elif website_course == 'Mirror-2':
+            self.file_download_source.setCurrentIndex(2)
+        elif website_course == 'Mirror-3':
+            self.file_download_source.setCurrentIndex(3)
 
     def save_download_path(self):
         download_path = QFileDialog.getExistingDirectory(self, "选择下载路径")

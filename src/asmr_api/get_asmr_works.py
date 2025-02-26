@@ -197,6 +197,7 @@ def get_asmr_downlist_api(stop_event):
     folder_flag = conf.read_name()
     selected_formats = conf.read_downfile_type()
     check_DB = conf.check_DB()
+    website_course = conf.read_website_course()
 
     while True:
         works_list = get_down_list()
@@ -251,7 +252,16 @@ def get_asmr_downlist_api(stop_event):
             except Exception as e:
                 print(f"数据库检查出错: {e}")
 
-            url = f"https://api.asmr.one/api/tracks/{keyword}?v=1"
+            if website_course == 'Original':
+               web_site = f'asmr.one'
+            elif website_course == 'Mirror-1':
+                web_site = 'asmr-100.com'
+            elif website_course == 'Mirror-2':
+                web_site = 'asmr-200.com'
+            elif website_course == 'Mirror-3':
+                web_site = 'asmr-300.com'
+
+            url = f"https://api.{web_site}/api/tracks/{keyword}?v=1"
             req = requests.get(url).json()
 
             # 解析下载信息

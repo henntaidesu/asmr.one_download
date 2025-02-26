@@ -179,6 +179,14 @@ class ReadConf:
         with open('conf.ini', 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
+    def read_website_course(self):
+        site_source = self.config.get('mirror_site', 'site_source')
+        return site_source
+
+    def write_website_course(self, site_source):
+        self.config.set('mirror_site', 'site_source', site_source)
+        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+            self.config.write(configfile)
 
 def create_ini_file():
     config = configparser.ConfigParser()
@@ -233,6 +241,10 @@ def create_ini_file():
         'host': 'localhost',
         'port': '10809',
         'type': 'http',
+    }
+
+    config['mirror_site'] = {
+        'site_address': 'Original',
     }
 
     # 将配置写入文件
