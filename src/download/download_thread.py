@@ -24,6 +24,49 @@ class DownloadThread(QThread):
         self.last_update_time = time.time()
         self.last_downloaded = 0
 
+        # 读取速度限制配置 (MB/s)
+        conf = ReadConf()
+        download_conf = conf.read_download_conf()
+        self.speed_limit_mbps = download_conf['speed_limit']  # MB/s
+        self.speed_limit_bps = self.speed_limit_mbps * 1024 * 1024  # 转换为 bytes/s
+
+        # 令牌桶算法参数
+        self.bucket_size = self.speed_limit_bps  # 桶大小等于每秒允许的字节数
+        self.tokens = self.bucket_size  # 初始令牌数
+        self.last_refill_time = time.time()
+
+    def refill_tokens(self):
+        """补充令牌桶中的令牌"""
+        if self.speed_limit_bps <= 0:
+            return
+
+        current_time = time.time()
+        elapsed = current_time - self.last_refill_time
+
+        # 根据时间补充令牌
+        tokens_to_add = elapsed * self.speed_limit_bps
+        self.tokens = min(self.bucket_size, self.tokens + tokens_to_add)
+        self.last_refill_time = current_time
+
+    def consume_tokens(self, bytes_needed):
+        """消费令牌，如果令牌不足则等待"""
+        if self.speed_limit_bps <= 0:
+            return
+
+        self.refill_tokens()
+
+        if self.tokens >= bytes_needed:
+            self.tokens -= bytes_needed
+        else:
+            # 计算需要等待的时间
+            deficit = bytes_needed - self.tokens
+            wait_time = deficit / self.speed_limit_bps
+            time.sleep(wait_time)
+
+            # 重新补充令牌并消费
+            self.refill_tokens()
+            self.tokens = max(0, self.tokens - bytes_needed)
+
     def run(self):
         try:
             self.download_files()
@@ -80,8 +123,12 @@ class DownloadThread(QThread):
                             time.sleep(0.1)
 
                         if chunk:
-                            f.write(chunk)
                             chunk_size = len(chunk)
+
+                            # 使用令牌桶算法进行速度限制
+                            self.consume_tokens(chunk_size)
+
+                            f.write(chunk)
                             file_downloaded += chunk_size
                             total_downloaded += chunk_size
 

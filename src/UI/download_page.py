@@ -5,13 +5,14 @@ from PyQt6.QtCore import QThread, pyqtSignal, QTimer
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QProgressBar, QListWidget, QListWidgetItem, QMessageBox,
-    QScrollArea, QFrame
+    QScrollArea, QFrame, QComboBox
 )
 from PyQt6 import QtCore, QtWidgets
 from src.asmr_api.get_down_list import get_down_list
 from src.asmr_api.get_work_detail import get_work_detail
 from src.download.download_thread import MultiFileDownloadManager
 from src.read_conf import ReadConf
+from src.language.language_manager import language_manager
 
 
 class WorkDetailThread(QThread):
@@ -81,30 +82,30 @@ class DownloadItemWidget(QWidget):
         bottom_layout = QHBoxLayout()
 
         # 状态标签
-        self.status_label = QLabel("等待下载")
+        self.status_label = QLabel(language_manager.get_text('waiting'))
         self.status_label.setStyleSheet("color: #666; font-size: 11px;")
         bottom_layout.addWidget(self.status_label)
 
         # 下载速度标签
-        self.speed_label = QLabel("0 KB/s")
+        self.speed_label = QLabel(f"0 {language_manager.get_text('kb_per_second')}")
         self.speed_label.setStyleSheet("color: #0066cc; font-size: 11px; font-weight: bold;")
         bottom_layout.addWidget(self.speed_label)
 
         # 文件大小标签
-        self.size_label = QLabel("获取中...")
+        self.size_label = QLabel(language_manager.get_text('loading'))
         self.size_label.setStyleSheet("color: #666; font-size: 11px;")
         bottom_layout.addWidget(self.size_label)
 
         bottom_layout.addStretch()
 
         # 控制按钮
-        self.start_button = QPushButton("开始")
+        self.start_button = QPushButton(language_manager.get_text('start'))
         self.start_button.setFixedSize(60, 25)
         self.start_button.clicked.connect(self.start_download)
         self.start_button.setEnabled(False)
         bottom_layout.addWidget(self.start_button)
 
-        self.pause_button = QPushButton("暂停")
+        self.pause_button = QPushButton(language_manager.get_text('pause'))
         self.pause_button.setFixedSize(60, 25)
         self.pause_button.clicked.connect(self.toggle_pause)
         self.pause_button.setEnabled(False)
@@ -266,7 +267,7 @@ class DownloadPage(QWidget):
 
 
     def setup_ui(self):
-        self.setWindowTitle("下载列表")
+        self.setWindowTitle(language_manager.get_text('app_title'))
         self.setFixedSize(700, 500)
 
         layout = QVBoxLayout()
@@ -276,36 +277,44 @@ class DownloadPage(QWidget):
         top_layout = QHBoxLayout()
 
         # 标题
-        title_label = QLabel("下载列表")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
-        top_layout.addWidget(title_label)
+        # title_label = QLabel("ASMR_download")
+        # title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        # top_layout.addWidget(title_label)
+
+        # 语言选择
+        self.language_combo = QComboBox()
+        self.language_combo.addItem("中文", "zh")
+        self.language_combo.addItem("English", "en")
+        self.language_combo.addItem("日本語", "ja")
+        self.language_combo.currentDataChanged.connect(self.change_language)
+        top_layout.addWidget(self.language_combo)
 
         top_layout.addStretch()
 
         # 全局速度显示
-        self.global_speed_label = QLabel("总速度: 0 KB/s")
+        self.global_speed_label = QLabel(f"{language_manager.get_text('total_speed')}: 0 {language_manager.get_text('kb_per_second')}")
         self.global_speed_label.setStyleSheet("color: #0066cc; font-weight: bold;")
         top_layout.addWidget(self.global_speed_label)
 
         # 开始下载按钮
-        self.start_all_button = QPushButton("开始下载")
+        self.start_all_button = QPushButton(language_manager.get_text('start_download'))
         self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
         self.start_all_button.clicked.connect(self.start_sequential_downloads)
         self.start_all_button.setEnabled(False)
         top_layout.addWidget(self.start_all_button)
 
         # 刷新按钮
-        self.refresh_button = QPushButton("刷新列表")
+        self.refresh_button = QPushButton(language_manager.get_text('refresh_list'))
         self.refresh_button.clicked.connect(self.load_download_list)
         top_layout.addWidget(self.refresh_button)
 
         # 全部暂停按钮
-        self.pause_all_button = QPushButton("全部暂停")
+        self.pause_all_button = QPushButton(language_manager.get_text('pause_all'))
         self.pause_all_button.clicked.connect(self.pause_all_downloads)
         top_layout.addWidget(self.pause_all_button)
 
         # 设置按钮
-        self.settings_button = QPushButton("设置")
+        self.settings_button = QPushButton(language_manager.get_text('settings'))
         self.settings_button.clicked.connect(self.open_settings)
         top_layout.addWidget(self.settings_button)
 
@@ -328,13 +337,13 @@ class DownloadPage(QWidget):
 
         # 底部状态栏
         status_layout = QHBoxLayout()
-        self.status_label = QLabel("准备就绪")
+        self.status_label = QLabel(language_manager.get_text('waiting'))
         self.status_label.setStyleSheet("color: #666; font-size: 11px;")
         status_layout.addWidget(self.status_label)
 
         status_layout.addStretch()
 
-        self.count_label = QLabel("总数: 0")
+        self.count_label = QLabel(f"{language_manager.get_text('total_count')}: 0")
         self.count_label.setStyleSheet("color: #666; font-size: 11px;")
         status_layout.addWidget(self.count_label)
 
@@ -500,6 +509,40 @@ class DownloadPage(QWidget):
                 if self.download_manager:
                     self.download_manager.pause_download(item_id)
 
+
+    def change_language(self, language_code):
+        """切换语言"""
+        language_manager.set_language(language_code)
+        self.update_ui_text()
+
+    def update_ui_text(self):
+        """更新界面文本"""
+        # 更新窗口标题
+        self.setWindowTitle(language_manager.get_text('app_title'))
+
+        # 更新顶部按钮
+        self.start_all_button.setText(language_manager.get_text('start_download'))
+        self.refresh_button.setText(language_manager.get_text('refresh_list'))
+        self.pause_all_button.setText(language_manager.get_text('pause_all'))
+        self.settings_button.setText(language_manager.get_text('settings'))
+
+        # 更新全局速度标签
+        current_speed = self.global_speed_label.text().split(': ')[1] if ': ' in self.global_speed_label.text() else f"0 {language_manager.get_text('kb_per_second')}"
+        self.global_speed_label.setText(f"{language_manager.get_text('total_speed')}: {current_speed}")
+
+        # 更新底部状态
+        current_count = self.count_label.text().split(': ')[1] if ': ' in self.count_label.text() else "0"
+        self.count_label.setText(f"{language_manager.get_text('total_count')}: {current_count}")
+
+        # 更新所有下载项目的按钮文本
+        for item in self.download_items.values():
+            if hasattr(item, 'start_button'):
+                item.start_button.setText(language_manager.get_text('start'))
+            if hasattr(item, 'pause_button'):
+                if item.is_paused:
+                    item.pause_button.setText(language_manager.get_text('resume'))
+                else:
+                    item.pause_button.setText(language_manager.get_text('pause'))
 
     def open_settings(self):
         """打开设置页面"""

@@ -213,20 +213,20 @@ class SetConfig(QMainWindow):
         self.path_conf_save_button = QPushButton("Select", self.centralwidget)
         self.path_conf_save_button.setGeometry(QtCore.QRect(310, 10, 60, 30))
         self.path_conf_save_button.clicked.connect(self.save_download_path)
-        # 开始下载按钮
-        self.down_start_button = QPushButton("Start", self.centralwidget)
-        self.down_start_button.setGeometry(QtCore.QRect(10, 250, 80, 30))
-        self.down_start_button.clicked.connect(self.down_start)
-        # 停止下载按钮
-        self.down_stop_button = QPushButton("Stop", self.centralwidget)
-        self.down_stop_button.setGeometry(QtCore.QRect(100, 250, 80, 30))
-        self.down_stop_button.clicked.connect(self.down_stop)
-        self.down_stop_button.setEnabled(False)
-        # 打开下载页面按钮
-        self.down_list_page_button = QPushButton("down page", self.centralwidget)
-        self.down_list_page_button.setGeometry(QtCore.QRect(280, 250, 80, 30))
-        self.down_list_page_button.clicked.connect(self.open_download_page)
-        self.down_list_page_button.setEnabled(True)
+        # # 开始下载按钮
+        # self.down_start_button = QPushButton("Start", self.centralwidget)
+        # self.down_start_button.setGeometry(QtCore.QRect(10, 250, 80, 30))
+        # self.down_start_button.clicked.connect(self.down_start)
+        # # 停止下载按钮
+        # self.down_stop_button = QPushButton("Stop", self.centralwidget)
+        # self.down_stop_button.setGeometry(QtCore.QRect(100, 250, 80, 30))
+        # self.down_stop_button.clicked.connect(self.down_stop)
+        # self.down_stop_button.setEnabled(False)
+        # # 打开下载页面按钮
+        # self.down_list_page_button = QPushButton("down page", self.centralwidget)
+        # self.down_list_page_button.setGeometry(QtCore.QRect(280, 250, 80, 30))
+        # self.down_list_page_button.clicked.connect(self.open_download_page)
+        # self.down_list_page_button.setEnabled(True)
 
 
         self.set_data()
