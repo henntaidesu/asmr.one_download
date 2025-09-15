@@ -62,5 +62,7 @@ TRANSLATIONS = {
     "token_expired": "Token expired or invalid, please login again",
     "network_error": "Network connection failed",
     "api_error": "API request failed",
-    "json_parse_error": "Data parsing failed"
+    "json_parse_error": "Data parsing failed",
+    "empty_list": "No download items found",
+    "relogin_required": "Please go to settings page to login again"
 }

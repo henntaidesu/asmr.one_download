@@ -421,8 +421,15 @@ class DownloadPage(QWidget):
 
     def setup_download_manager(self):
         """设置下载管理器"""
-        download_dir = "./downloads"  # 默认下载目录
-        os.makedirs(download_dir, exist_ok=True)  # 确保下载目录存在
+        # 从配置文件获取下载路径，不再默认创建downloads文件夹
+        download_conf = self.conf.read_download_conf()
+        download_dir = download_conf['download_path']
+        
+        # 只在用户指定的下载路径不存在时才创建
+        if not os.path.exists(download_dir):
+            os.makedirs(download_dir, exist_ok=True)
+            print(f"创建用户指定的下载目录: {download_dir}")
+        
         self.download_manager = MultiFileDownloadManager(download_dir)
 
         # 连接下载管理器信号
@@ -461,16 +468,43 @@ class DownloadPage(QWidget):
 
     def on_list_error(self, error_msg):
         print(f"列表获取错误: {error_msg}")
-        # 显示更详细的错误信息
-        detailed_error = f"{language_manager.get_text('error')}: {error_msg}"
-        self.status_label.setText(detailed_error)
         
-        # 弹出详细错误对话框
+        # 根据错误类型显示对应的多语言提示
+        if error_msg == "TOKEN_EXPIRED":
+            title = language_manager.get_text('token_expired')
+            message = language_manager.get_text('token_expired')
+            detail = language_manager.get_text('relogin_required')
+        elif error_msg == "NETWORK_ERROR":
+            title = language_manager.get_text('network_error') 
+            message = language_manager.get_text('network_error')
+            detail = "请检查:\n1. 网络连接是否正常\n2. 代理设置是否正确\n3. 防火墙是否阻止了连接"
+        elif error_msg == "API_ERROR":
+            title = language_manager.get_text('api_error')
+            message = language_manager.get_text('api_error')
+            detail = "请检查:\n1. API服务是否正常\n2. 尝试切换镜像站点\n3. 稍后重试"
+        elif error_msg == "JSON_PARSE_ERROR":
+            title = language_manager.get_text('json_parse_error')
+            message = language_manager.get_text('json_parse_error')
+            detail = "服务器返回了无效的数据格式，请尝试切换镜像站点或稍后重试"
+        elif error_msg == "EMPTY_LIST":
+            title = language_manager.get_text('empty_list')
+            message = language_manager.get_text('empty_list')
+            detail = "可能的原因:\n1. 您的下载列表为空\n2. 筛选条件过于严格\n3. 账号权限不足"
+        else:
+            # 处理其他异常错误
+            title = language_manager.get_text('error')
+            message = "获取下载列表失败"
+            detail = f"详细错误信息:\n{error_msg}\n\n请检查:\n1. 网络连接是否正常\n2. 登录信息是否有效\n3. API服务是否可用\n4. 代理设置是否正确"
+        
+        # 更新状态标签
+        self.status_label.setText(f"{language_manager.get_text('error')}: {title}")
+        
+        # 弹出相应的错误对话框
         msg_box = QMessageBox(self)
         msg_box.setIcon(QMessageBox.Icon.Warning)
         msg_box.setWindowTitle(language_manager.get_text('error'))
-        msg_box.setText("获取下载列表失败")
-        msg_box.setDetailedText(f"详细错误信息:\n{error_msg}\n\n请检查:\n1. 网络连接是否正常\n2. 登录信息是否有效\n3. API服务是否可用\n4. 代理设置是否正确")
+        msg_box.setText(message)
+        msg_box.setDetailedText(detail)
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg_box.exec()
 

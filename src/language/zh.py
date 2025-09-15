@@ -61,6 +61,8 @@ TRANSLATIONS = {
     "invalid_integer": "请输入整数",
     "token_expired": "Token过期或不存在，请重新登录",
     "network_error": "网络连接失败",
-    "api_error": "API请求失败",
-    "json_parse_error": "数据解析失败"
+    "api_error": "API请求失败", 
+    "json_parse_error": "数据解析失败",
+    "empty_list": "未获取到任何下载项目",
+    "relogin_required": "请前往设置页面重新登录"
 }

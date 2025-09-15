@@ -62,5 +62,7 @@ TRANSLATIONS = {
     "token_expired": "トークンが期限切れまたは無効です。再ログインしてください",
     "network_error": "ネットワーク接続に失敗しました",
     "api_error": "APIリクエストが失敗しました",
-    "json_parse_error": "データ解析に失敗しました"
+    "json_parse_error": "データ解析に失敗しました",
+    "empty_list": "ダウンロード項目が見つかりません",
+    "relogin_required": "設定ページで再ログインしてください"
 }
