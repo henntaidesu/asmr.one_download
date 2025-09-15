@@ -33,7 +33,6 @@ class WorkDetailThread(QThread):
 class DownloadItemWidget(QWidget):
     download_paused = pyqtSignal(str)
     download_resumed = pyqtSignal(str)
-    download_cancelled = pyqtSignal(str)
     download_started = pyqtSignal(str, dict)
     detail_ready = pyqtSignal()
 
@@ -111,11 +110,6 @@ class DownloadItemWidget(QWidget):
         self.pause_button.setEnabled(False)
         bottom_layout.addWidget(self.pause_button)
 
-        self.cancel_button = QPushButton("取消")
-        self.cancel_button.setFixedSize(60, 25)
-        self.cancel_button.clicked.connect(self.cancel_download)
-        bottom_layout.addWidget(self.cancel_button)
-
         layout.addLayout(bottom_layout)
 
         # 分割线
@@ -171,6 +165,8 @@ class DownloadItemWidget(QWidget):
             self.pause_download()
 
     def pause_download(self):
+        if not self.is_downloading:
+            return
         self.is_paused = True
         self.pause_button.setText("继续")
         self.status_label.setText("已暂停")
@@ -178,19 +174,13 @@ class DownloadItemWidget(QWidget):
         self.download_paused.emit(str(self.work_info['id']))
 
     def resume_download(self):
+        if not self.is_downloading:
+            return
         self.is_paused = False
         self.pause_button.setText("暂停")
         self.status_label.setText("下载中...")
         self.download_resumed.emit(str(self.work_info['id']))
 
-    def cancel_download(self):
-        self.status_label.setText("已取消")
-        self.speed_label.setText("0 KB/s")
-        self.start_button.setEnabled(False)
-        self.pause_button.setEnabled(False)
-        self.cancel_button.setEnabled(False)
-        self.is_downloading = False
-        self.download_cancelled.emit(str(self.work_info['id']))
 
     def update_progress(self, progress, downloaded_bytes=0, total_bytes=0, status="下载中..."):
         self.progress_bar.setValue(progress)
@@ -213,7 +203,6 @@ class DownloadItemWidget(QWidget):
             self.speed_label.setText("0 KB/s")
             self.start_button.setEnabled(False)
             self.pause_button.setEnabled(False)
-            self.cancel_button.setEnabled(False)
             self.is_downloading = False
 
     def update_speed(self, speed_kbps):
@@ -231,6 +220,7 @@ class DownloadItemWidget(QWidget):
     def set_error(self, error_msg):
         self.status_label.setText(f"错误: {error_msg}")
         self.speed_label.setText("0 KB/s")
+        self.start_button.setEnabled(False)
         self.pause_button.setEnabled(False)
         self.progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #ff6b6b; }")
 
@@ -400,7 +390,6 @@ class DownloadPage(QWidget):
         item_widget = DownloadItemWidget(work_info)
         item_widget.download_paused.connect(self.on_download_paused)
         item_widget.download_resumed.connect(self.on_download_resumed)
-        item_widget.download_cancelled.connect(self.on_download_cancelled)
         item_widget.download_started.connect(self.on_item_download_started)
         item_widget.detail_ready.connect(self.check_start_all_button)
 
@@ -467,12 +456,6 @@ class DownloadPage(QWidget):
         print(f"继续下载: {item_id}")
         if self.download_manager:
             self.download_manager.resume_download(item_id)
-
-    def on_download_cancelled(self, item_id):
-        print(f"取消下载: {item_id}")
-        if self.download_manager:
-            self.download_manager.cancel_download(item_id)
-        self.update_global_speed()
 
     def check_start_all_button(self):
         """检查是否应该启用开始全部下载按钮"""

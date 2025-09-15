@@ -63,19 +63,42 @@ def get_work_detail(work_id):
             'files': []
         }
 
-        # 处理所有文件
-        for track in tracks_data:
-            if track.get('mediaDownloadUrl'):
-                file_info = {
-                    'title': track.get('title', ''),
-                    'download_url': track.get('mediaDownloadUrl'),
-                    'size': track.get('size', 0),
-                    'duration': track.get('duration', 0) if track.get('type') == 'audio' else 0,
-                    'hash': track.get('hash', ''),
-                    'type': track.get('type', 'other')
-                }
-                work_detail['files'].append(file_info)
-                work_detail['total_size'] += file_info['size']
+        # 递归处理文件夹结构
+        def process_items(items, prefix_path=""):
+            for item in items:
+                if item.get('type') == 'folder' and 'children' in item:
+                    # 递归处理文件夹
+                    folder_path = f"{prefix_path}/{item.get('title', '')}" if prefix_path else item.get('title', '')
+                    process_items(item['children'], folder_path)
+                elif item.get('mediaDownloadUrl'):
+                    # 处理文件
+                    file_size = item.get('size', 0)
+
+                    # 如果API没有提供文件大小，尝试通过HEAD请求获取
+                    if file_size == 0:
+                        try:
+                            head_response = requests.head(item.get('mediaDownloadUrl'),
+                                                        headers=headers, proxies=proxy_url, timeout=10)
+                            content_length = head_response.headers.get('content-length')
+                            if content_length:
+                                file_size = int(content_length)
+                        except:
+                            file_size = 0  # 如果获取失败，保持为0
+
+                    file_info = {
+                        'title': item.get('title', ''),
+                        'download_url': item.get('mediaDownloadUrl'),
+                        'size': file_size,
+                        'duration': item.get('duration', 0) if item.get('type') == 'audio' else 0,
+                        'hash': item.get('hash', ''),
+                        'type': item.get('type', 'other'),
+                        'folder_path': prefix_path
+                    }
+                    work_detail['files'].append(file_info)
+                    work_detail['total_size'] += file_info['size']
+
+        # 处理所有文件和文件夹
+        process_items(tracks_data)
 
         return work_detail
 
