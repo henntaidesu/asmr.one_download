@@ -36,16 +36,56 @@ def get_down_list():
     else:
         proxy_url = None
 
-    req = requests.get(url, headers=headers, proxies=proxy_url).json()
+    try:
+        # 发送API请求
+        response = requests.get(url, headers=headers, proxies=proxy_url)
+        
+        # 打印调试信息
+        print(f"API请求URL: {url}")
+        print(f"响应状态码: {response.status_code}")
+        print(f"响应头信息: {response.headers}")
+        print(f"API原始响应: {response.text}")
+        
+        # 检查响应状态码
+        if response.status_code == 401:
+            print(f"Token认证失败，状态码: 401")
+            print(f"响应内容: {response.text}")
+            # 返回特殊标识，用于UI层识别
+            return "TOKEN_EXPIRED"
+        elif response.status_code != 200:
+            print(f"API请求失败，状态码: {response.status_code}")
+            print(f"响应内容: {response.text}")
+            return "API_ERROR"
+        
+        # 尝试解析JSON
+        req = response.json()
+        print(f"解析后的JSON数据: {req}")
+        
+    except requests.exceptions.RequestException as e:
+        print(f"网络请求异常: {e}")
+        return "NETWORK_ERROR"
+    except ValueError as e:
+        print(f"JSON解析失败: {e}")
+        print(f"响应文本: {response.text}")
+        return "JSON_PARSE_ERROR"
+    
     id_list = []
 
-    if req['works']:
-        data = req['works']
-        for work in data:
-            work_info = {
-                'id': work['id'],
-                'title': work['title'],
-            }
-            id_list.append(work_info)
+    # 检查返回数据结构
+    if 'works' in req:
+        if req['works']:
+            print(f"成功获取到 {len(req['works'])} 个作品")
+            data = req['works']
+            for work in data:
+                work_info = {
+                    'id': work['id'],
+                    'title': work['title'],
+                }
+                id_list.append(work_info)
+        else:
+            print("API返回的works列表为空")
+    else:
+        print("API返回数据中没有'works'字段")
+        print(f"可用字段: {list(req.keys())}")
 
     return id_list

@@ -5,7 +5,9 @@
 
 import os
 import configparser
-import importlib
+
+# 静态导入语言模块，确保PyInstaller能正确打包
+from src.language import zh, en, ja
 
 class LanguageManager:
     def __init__(self):
@@ -17,18 +19,20 @@ class LanguageManager:
 
     def load_languages(self):
         """加载所有语言文件"""
-        # 支持的语言
-        supported_languages = ['zh', 'en', 'ja']
+        # 使用静态导入的语言模块，确保PyInstaller能正确打包
+        language_modules = {
+            'zh': zh,
+            'en': en,
+            'ja': ja
+        }
 
-        for lang in supported_languages:
+        for lang_code, lang_module in language_modules.items():
             try:
-                # 动态导入语言模块
-                lang_module = importlib.import_module(f'src.language.{lang}')
-                self.languages[lang] = lang_module.TRANSLATIONS
-                print(f"Loaded language module: {lang}")
-            except (ImportError, AttributeError) as e:
-                print(f"Language module {lang} not found or invalid: {e}")
-                self.languages[lang] = {}
+                self.languages[lang_code] = lang_module.TRANSLATIONS
+                print(f"Loaded language module: {lang_code}")
+            except AttributeError as e:
+                print(f"Language module {lang_code} missing TRANSLATIONS: {e}")
+                self.languages[lang_code] = {}
 
     def load_language_config(self):
         """从配置文件加载语言设置"""

@@ -276,13 +276,40 @@ class DownloadListThread(QThread):
 
     def run(self):
         try:
+            print("开始获取下载列表...")
             works_list = get_down_list()
-            if works_list:
+            
+            # 检查是否返回了错误标识
+            if isinstance(works_list, str):
+                if works_list == "TOKEN_EXPIRED":
+                    self.error_occurred.emit("TOKEN_EXPIRED")
+                    return
+                elif works_list == "NETWORK_ERROR":
+                    self.error_occurred.emit("NETWORK_ERROR")
+                    return
+                elif works_list == "API_ERROR":
+                    self.error_occurred.emit("API_ERROR")
+                    return
+                elif works_list == "JSON_PARSE_ERROR":
+                    self.error_occurred.emit("JSON_PARSE_ERROR")
+                    return
+            
+            # 检查是否是有效的列表数据
+            if isinstance(works_list, list) and works_list:
+                print(f"成功获取到 {len(works_list)} 个下载项目")
                 self.list_updated.emit(works_list)
             else:
-                self.error_occurred.emit("Failed to get download list")
+                error_msg = "API返回空列表或数据格式错误"
+                print(f"错误: {error_msg}")
+                self.error_occurred.emit("EMPTY_LIST")
         except Exception as e:
-            self.error_occurred.emit(f"Failed to get download list: {str(e)}")
+            error_msg = f"Failed to get download list: {str(e)}"
+            print(f"异常错误: {error_msg}")
+            print(f"异常类型: {type(e).__name__}")
+            import traceback
+            print(f"完整错误堆栈:")
+            traceback.print_exc()
+            self.error_occurred.emit(f"EXCEPTION: {str(e)}")
 
 
 class DownloadPage(QWidget):
@@ -433,8 +460,19 @@ class DownloadPage(QWidget):
             self.start_all_button.setEnabled(True)
 
     def on_list_error(self, error_msg):
-        self.status_label.setText(f"{language_manager.get_text('error')}: {error_msg}")
-        QMessageBox.warning(self, language_manager.get_text('error'), error_msg)
+        print(f"列表获取错误: {error_msg}")
+        # 显示更详细的错误信息
+        detailed_error = f"{language_manager.get_text('error')}: {error_msg}"
+        self.status_label.setText(detailed_error)
+        
+        # 弹出详细错误对话框
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Icon.Warning)
+        msg_box.setWindowTitle(language_manager.get_text('error'))
+        msg_box.setText("获取下载列表失败")
+        msg_box.setDetailedText(f"详细错误信息:\n{error_msg}\n\n请检查:\n1. 网络连接是否正常\n2. 登录信息是否有效\n3. API服务是否可用\n4. 代理设置是否正确")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg_box.exec()
 
     def add_download_item(self, work_info):
         item_widget = DownloadItemWidget(work_info)

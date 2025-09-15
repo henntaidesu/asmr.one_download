@@ -58,5 +58,9 @@ TRANSLATIONS = {
     "invalid_decimal": "请输入小数",
     "invalid_ip": "ip地址不合法",
     "port_range_error": "请输入 0 - 65535",
-    "invalid_integer": "请输入整数"
+    "invalid_integer": "请输入整数",
+    "token_expired": "Token过期或不存在，请重新登录",
+    "network_error": "网络连接失败",
+    "api_error": "API请求失败",
+    "json_parse_error": "数据解析失败"
 }

@@ -58,5 +58,9 @@ TRANSLATIONS = {
     "invalid_decimal": "小数を入力してください",
     "invalid_ip": "IPアドレスが無効です",
     "port_range_error": "0 - 65535を入力してください",
-    "invalid_integer": "整数を入力してください"
+    "invalid_integer": "整数を入力してください",
+    "token_expired": "トークンが期限切れまたは無効です。再ログインしてください",
+    "network_error": "ネットワーク接続に失敗しました",
+    "api_error": "APIリクエストが失敗しました",
+    "json_parse_error": "データ解析に失敗しました"
 }

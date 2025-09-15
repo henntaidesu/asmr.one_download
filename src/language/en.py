@@ -58,5 +58,9 @@ TRANSLATIONS = {
     "invalid_decimal": "Please enter a decimal",
     "invalid_ip": "Invalid IP address",
     "port_range_error": "Please enter 0 - 65535",
-    "invalid_integer": "Please enter an integer"
+    "invalid_integer": "Please enter an integer",
+    "token_expired": "Token expired or invalid, please login again",
+    "network_error": "Network connection failed",
+    "api_error": "API request failed",
+    "json_parse_error": "Data parsing failed"
 }
