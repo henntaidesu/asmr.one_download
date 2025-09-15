@@ -3,9 +3,9 @@
 多语言管理器
 """
 
-import json
 import os
 import configparser
+import importlib
 
 class LanguageManager:
     def __init__(self):
@@ -17,18 +17,17 @@ class LanguageManager:
 
     def load_languages(self):
         """加载所有语言文件"""
-        language_dir = os.path.dirname(__file__)
-
         # 支持的语言
         supported_languages = ['zh', 'en', 'ja']
 
         for lang in supported_languages:
-            lang_file = os.path.join(language_dir, f'{lang}.json')
             try:
-                with open(lang_file, 'r', encoding='utf-8') as f:
-                    self.languages[lang] = json.load(f)
-            except FileNotFoundError:
-                print(f"Language file {lang_file} not found")
+                # 动态导入语言模块
+                lang_module = importlib.import_module(f'src.language.{lang}')
+                self.languages[lang] = lang_module.TRANSLATIONS
+                print(f"Loaded language module: {lang}")
+            except (ImportError, AttributeError) as e:
+                print(f"Language module {lang} not found or invalid: {e}")
                 self.languages[lang] = {}
 
     def load_language_config(self):
