@@ -92,7 +92,17 @@ class DownloadThread(QThread):
         total_downloaded = 0
         for file_info in self.work_detail['files']:
             filename = self.sanitize_filename(file_info['title'])
-            file_path = os.path.join(self.download_dir, filename)
+            # 获取文件夹路径并创建完整的文件路径
+            folder_path = file_info.get('folder_path', '')
+            if folder_path:
+                # 清理文件夹路径
+                clean_folder_path = self.sanitize_folder_path(folder_path)
+                # 创建子文件夹
+                subfolder_dir = os.path.join(self.download_dir, clean_folder_path)
+                file_path = os.path.join(subfolder_dir, filename)
+            else:
+                file_path = os.path.join(self.download_dir, filename)
+            
             if os.path.exists(file_path):
                 # 使用os.path.getsize获取实际文件大小，支持大文件
                 downloaded_size = os.path.getsize(file_path)
@@ -118,7 +128,24 @@ class DownloadThread(QThread):
             file_size = file_info['size']
             download_url = file_info['download_url']
             filename = self.sanitize_filename(file_info['title'])
-            file_path = os.path.join(self.download_dir, filename)
+            
+            # 获取文件夹路径并创建完整的文件路径
+            folder_path = file_info.get('folder_path', '')
+            if folder_path:
+                # 清理文件夹路径，移除不合法字符
+                clean_folder_path = self.sanitize_folder_path(folder_path)
+                if clean_folder_path:  # 确保清理后的路径不为空
+                    # 创建子文件夹
+                    subfolder_dir = os.path.join(self.download_dir, clean_folder_path)
+                    os.makedirs(subfolder_dir, exist_ok=True)
+                    file_path = os.path.join(subfolder_dir, filename)
+                    print(f"下载文件到子文件夹: {clean_folder_path}/{filename}")
+                else:
+                    file_path = os.path.join(self.download_dir, filename)
+                    print(f"文件夹路径无效，下载文件到根目录: {filename}")
+            else:
+                file_path = os.path.join(self.download_dir, filename)
+                print(f"下载文件到根目录: {filename}")
 
             # 检查文件是否已存在并完整
             if os.path.exists(file_path):
@@ -207,6 +234,30 @@ class DownloadThread(QThread):
             filename = name[:200-len(ext)] + ext
         return filename or "unnamed_file"
 
+    def sanitize_folder_path(self, folder_path):
+        """清理文件夹路径，保留路径分隔符但移除不合法字符"""
+        import re
+        if not folder_path:
+            return ""
+        
+        # 分割路径为各个部分
+        path_parts = folder_path.split('/')
+        cleaned_parts = []
+        
+        for part in path_parts:
+            if part:  # 跳过空字符串
+                # 清理每个文件夹名称，但不移除路径分隔符
+                cleaned_part = re.sub(r'[<>:"|?*]', '_', part)  # 不包含 / 和 \
+                cleaned_part = cleaned_part.rstrip('. ')
+                # 限制文件夹名长度
+                if len(cleaned_part) > 100:
+                    cleaned_part = cleaned_part[:100]
+                if cleaned_part:
+                    cleaned_parts.append(cleaned_part)
+        
+        # 使用系统相应的路径分隔符连接路径
+        return os.sep.join(cleaned_parts) if cleaned_parts else ""
+
 
 class MultiFileDownloadManager(QThread):
     """管理多个作品的下载"""
@@ -269,8 +320,11 @@ class MultiFileDownloadManager(QThread):
             thread.wait()
             del self.active_downloads[work_id]
 
+        # 清空下载队列，停止后续下载
+        self.download_queue.clear()
+        
         self.download_failed.emit(work_id, error)
-        self.start_next_download()  # 开始下一个下载
+        # 不再自动开始下一个下载，让用户决定是否继续
 
     def pause_download(self, work_id):
         """暂停指定下载"""

@@ -32,9 +32,6 @@ class WorkDetailThread(QThread):
 
 
 class DownloadItemWidget(QWidget):
-    download_paused = pyqtSignal(str)
-    download_resumed = pyqtSignal(str)
-    download_started = pyqtSignal(str, dict)
     detail_ready = pyqtSignal()
 
     def __init__(self, work_info):
@@ -98,19 +95,6 @@ class DownloadItemWidget(QWidget):
 
         bottom_layout.addStretch()
 
-        # 控制按钮
-        self.start_button = QPushButton(language_manager.get_text('start'))
-        self.start_button.setFixedSize(60, 25)
-        self.start_button.clicked.connect(self.start_download)
-        self.start_button.setEnabled(False)
-        bottom_layout.addWidget(self.start_button)
-
-        self.pause_button = QPushButton(language_manager.get_text('pause'))
-        self.pause_button.setFixedSize(60, 25)
-        self.pause_button.clicked.connect(self.toggle_pause)
-        self.pause_button.setEnabled(False)
-        bottom_layout.addWidget(self.pause_button)
-
         layout.addLayout(bottom_layout)
 
         # 分割线
@@ -134,7 +118,6 @@ class DownloadItemWidget(QWidget):
         self.work_detail = work_detail
         if work_detail:
             self.update_initial_progress()
-            self.start_button.setEnabled(True)
             # 通知父窗口检查是否可以启用全局开始按钮
             self.detail_ready.emit()
         else:
@@ -161,7 +144,6 @@ class DownloadItemWidget(QWidget):
         
         if initial_progress == 100:
             self.status_label.setText(language_manager.get_text('completed'))
-            self.start_button.setEnabled(False)
         elif downloaded_size > 0:
             self.status_label.setText(f"{language_manager.get_text('ready_to_download')} - 已下载 {initial_progress}%")
         else:
@@ -173,38 +155,28 @@ class DownloadItemWidget(QWidget):
         self.status_label.setText(f"{language_manager.get_text('error')}: {error_msg}")
 
     def start_download(self):
-        """开始下载"""
+        """开始下载（由全局按钮调用）"""
         if not self.work_detail:
             return
 
         self.is_downloading = True
-        self.start_button.setEnabled(False)
-        self.pause_button.setEnabled(True)
         self.status_label.setText(language_manager.get_text('downloading'))
-        self.download_started.emit(str(self.work_info['id']), self.work_detail)
-
-    def toggle_pause(self):
-        if self.is_paused:
-            self.resume_download()
-        else:
-            self.pause_download()
+        return str(self.work_info['id']), self.work_detail
 
     def pause_download(self):
+        """暂停下载（由全局按钮调用）"""
         if not self.is_downloading:
             return
         self.is_paused = True
-        self.pause_button.setText(language_manager.get_text('resume'))
         self.status_label.setText(language_manager.get_text('paused'))
         self.speed_label.setText("0 KB/s")
-        self.download_paused.emit(str(self.work_info['id']))
 
     def resume_download(self):
+        """继续下载（由全局按钮调用）"""
         if not self.is_downloading:
             return
         self.is_paused = False
-        self.pause_button.setText(language_manager.get_text('pause'))
         self.status_label.setText(language_manager.get_text('downloading'))
-        self.download_resumed.emit(str(self.work_info['id']))
 
 
     def update_progress(self, progress, downloaded_bytes=0, total_bytes=0, status="下载中..."):
@@ -236,8 +208,6 @@ class DownloadItemWidget(QWidget):
         if progress == 100:
             self.status_label.setText(language_manager.get_text('completed'))
             self.speed_label.setText("0 KB/s")
-            self.start_button.setEnabled(False)
-            self.pause_button.setEnabled(False)
             self.is_downloading = False
 
     def update_speed(self, speed_kbps):
@@ -250,14 +220,12 @@ class DownloadItemWidget(QWidget):
 
     def set_downloading(self):
         self.status_label.setText(language_manager.get_text('downloading'))
-        self.pause_button.setEnabled(True)
 
     def set_error(self, error_msg):
         self.status_label.setText(f"{language_manager.get_text('error')}: {error_msg}")
         self.speed_label.setText("0 KB/s")
-        self.start_button.setEnabled(False)
-        self.pause_button.setEnabled(False)
         self.progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #ff6b6b; }")
+        self.is_downloading = False
 
     def calculate_downloaded_size(self):
         """计算已下载的文件大小"""
@@ -292,7 +260,19 @@ class DownloadItemWidget(QWidget):
             if os.path.exists(work_download_dir):
                 for file_info in self.work_detail['files']:
                     file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_info['title'])
-                    file_path = os.path.join(work_download_dir, file_title)
+                    
+                    # 获取文件夹路径并创建完整的文件路径
+                    folder_path = file_info.get('folder_path', '')
+                    if folder_path:
+                        # 清理文件夹路径
+                        clean_folder_path = re.sub(r'[<>:"|?*]', '_', folder_path)
+                        clean_folder_path = clean_folder_path.rstrip('. ')
+                        # 替换路径分隔符为本地格式
+                        clean_folder_path = clean_folder_path.replace('/', os.sep)
+                        
+                        file_path = os.path.join(work_download_dir, clean_folder_path, file_title)
+                    else:
+                        file_path = os.path.join(work_download_dir, file_title)
                     
                     if os.path.exists(file_path):
                         # 使用os.path.getsize获取实际文件大小，支持大文件
@@ -337,13 +317,6 @@ class DownloadItemWidget(QWidget):
 
     def update_language(self):
         """更新语言显示"""
-        # 更新按钮文本
-        self.start_button.setText(language_manager.get_text('start'))
-        if self.is_paused:
-            self.pause_button.setText(language_manager.get_text('resume'))
-        else:
-            self.pause_button.setText(language_manager.get_text('pause'))
-
         # 更新状态标签
         if not self.is_downloading:
             if self.work_detail:
@@ -417,6 +390,7 @@ class DownloadPage(QWidget):
         self.conf = ReadConf()
         self.download_items = {}
         self.download_manager = None
+        self.is_downloading_active = False  # 跟踪是否有活动下载
         self.setup_ui()
         self.setup_download_manager()
         self.load_download_list()
@@ -463,10 +437,10 @@ class DownloadPage(QWidget):
         self.global_speed_label.setStyleSheet("color: #0066cc; font-weight: bold;")
         top_layout.addWidget(self.global_speed_label)
 
-        # 开始下载按钮
+        # 开始/停止下载按钮
         self.start_all_button = QPushButton(language_manager.get_text('start_download'))
         self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
-        self.start_all_button.clicked.connect(self.start_sequential_downloads)
+        self.start_all_button.clicked.connect(self.toggle_downloads)
         self.start_all_button.setEnabled(False)
         top_layout.addWidget(self.start_all_button)
 
@@ -474,11 +448,6 @@ class DownloadPage(QWidget):
         self.refresh_button = QPushButton(language_manager.get_text('refresh_list'))
         self.refresh_button.clicked.connect(self.load_download_list)
         top_layout.addWidget(self.refresh_button)
-
-        # 全部暂停按钮
-        self.pause_all_button = QPushButton(language_manager.get_text('pause_all'))
-        self.pause_all_button.clicked.connect(self.pause_all_downloads)
-        top_layout.addWidget(self.pause_all_button)
 
         # 设置按钮
         self.settings_button = QPushButton(language_manager.get_text('settings'))
@@ -609,9 +578,6 @@ class DownloadPage(QWidget):
 
     def add_download_item(self, work_info):
         item_widget = DownloadItemWidget(work_info)
-        item_widget.download_paused.connect(self.on_download_paused)
-        item_widget.download_resumed.connect(self.on_download_resumed)
-        item_widget.download_started.connect(self.on_item_download_started)
         item_widget.detail_ready.connect(self.check_start_all_button)
 
         # 插入到倒数第二个位置（最后一个是stretch）
@@ -626,12 +592,6 @@ class DownloadPage(QWidget):
             self.download_layout.removeWidget(item)
             item.deleteLater()
             del self.download_items[item_id]
-
-    def on_item_download_started(self, work_id, work_detail):
-        """处理单个项目开始下载"""
-        if self.download_manager:
-            self.download_manager.add_download(int(work_id), work_detail)
-            self.download_manager.start_next_download()
 
     def on_download_started(self, work_id):
         """下载开始"""
@@ -653,6 +613,10 @@ class DownloadPage(QWidget):
         if self.download_manager and len(self.download_manager.download_queue) > 0:
             self.status_label.setText(f"{language_manager.get_text('download_completed')}: RJ{work_id}, {language_manager.get_text('continue_next')}")
         else:
+            # 所有下载完成，重置按钮状态
+            self.is_downloading_active = False
+            self.start_all_button.setText(language_manager.get_text('start_download'))
+            self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
             self.status_label.setText(language_manager.get_text('all_downloads_completed'))
 
     def on_download_failed(self, work_id, error):
@@ -660,6 +624,14 @@ class DownloadPage(QWidget):
         if work_id in self.download_items:
             self.download_items[work_id].set_error(error)
         self.update_global_speed()
+        
+        # 下载失败时重置按钮状态
+        self.is_downloading_active = False
+        self.start_all_button.setText(language_manager.get_text('start_download'))
+        self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
+        
+        # 显示错误对话框
+        self.show_download_error(work_id, error)
 
     def on_speed_updated(self, work_id, speed_kbps):
         """速度更新"""
@@ -667,59 +639,82 @@ class DownloadPage(QWidget):
             self.download_items[work_id].update_speed(speed_kbps)
         self.update_global_speed()
 
-    def on_download_paused(self, item_id):
-        print(f"暂停下载: {item_id}")
-        if self.download_manager:
-            self.download_manager.pause_download(item_id)
-        self.update_global_speed()
-
-    def on_download_resumed(self, item_id):
-        print(f"继续下载: {item_id}")
-        if self.download_manager:
-            self.download_manager.resume_download(item_id)
-
     def check_start_all_button(self):
         """检查是否应该启用开始全部下载按钮"""
         ready_count = 0
         for item in self.download_items.values():
-            if item.work_detail and item.start_button.isEnabled() and not item.is_downloading:
+            if item.work_detail and not item.is_downloading:
                 ready_count += 1
 
         # 如果有准备好的下载项，启用按钮
         self.start_all_button.setEnabled(ready_count > 0)
 
-    def start_sequential_downloads(self):
-        """按顺序开始下载"""
+    def toggle_downloads(self):
+        """切换下载状态：开始下载或停止下载"""
+        if not self.is_downloading_active:
+            # 当前没有下载，开始下载
+            self.start_downloads()
+        else:
+            # 当前有下载，停止下载
+            self.stop_downloads()
+
+    def start_downloads(self):
+        """开始下载"""
         # 获取所有准备好的下载项，按添加顺序排列
         ready_items = []
         for i in range(self.download_layout.count() - 1):  # 排除最后的stretch
             widget = self.download_layout.itemAt(i).widget()
             if isinstance(widget, DownloadItemWidget):
-                if (not widget.is_downloading and
-                    widget.start_button.isEnabled() and
-                    widget.work_detail):
+                if (not widget.is_downloading and widget.work_detail):
                     ready_items.append(widget)
 
         if ready_items:
             # 开始第一个下载
             first_item = ready_items[0]
-            first_item.start_download()
+            work_id, work_detail = first_item.start_download()
+            
+            # 添加到下载管理器
+            if self.download_manager and work_id and work_detail:
+                self.download_manager.add_download(int(work_id), work_detail)
+                self.download_manager.start_next_download()
 
             # 将剩余的添加到队列
             for item in ready_items[1:]:
                 if self.download_manager:
                     self.download_manager.add_download(int(item.work_info['id']), item.work_detail)
 
+            # 更新状态
+            self.is_downloading_active = True
+            self.start_all_button.setText(language_manager.get_text('stop_download'))
+            self.start_all_button.setStyleSheet("background-color: #f44336; color: white; font-weight: bold;")
             self.status_label.setText(f"{language_manager.get_text('start_sequential_download')} {len(ready_items)} {language_manager.get_text('tasks')}")
         else:
             self.status_label.setText(language_manager.get_text('no_downloadable_tasks'))
 
-    def pause_all_downloads(self):
-        for item_id, item in self.download_items.items():
-            if item.is_downloading and not item.is_paused and item.pause_button.isEnabled():
-                item.pause_download()
-                if self.download_manager:
-                    self.download_manager.pause_download(item_id)
+    def stop_downloads(self):
+        """停止所有下载"""
+        # 停止下载管理器
+        if self.download_manager:
+            # 清空队列
+            self.download_manager.download_queue.clear()
+            
+            # 取消所有活动下载
+            for work_id in list(self.download_manager.active_downloads.keys()):
+                self.download_manager.cancel_download(work_id)
+
+        # 更新所有下载项状态
+        for item in self.download_items.values():
+            if item.is_downloading:
+                item.is_downloading = False
+                item.is_paused = False
+                item.status_label.setText(language_manager.get_text('ready_to_download'))
+                item.speed_label.setText("0 KB/s")
+
+        # 更新按钮状态
+        self.is_downloading_active = False
+        self.start_all_button.setText(language_manager.get_text('start_download'))
+        self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
+        self.status_label.setText(language_manager.get_text('all_downloads_stopped'))
 
 
     def on_language_changed(self, index):
@@ -738,10 +733,13 @@ class DownloadPage(QWidget):
         # 更新窗口标题
         self.setWindowTitle(language_manager.get_text('app_title'))
 
-        # 更新顶部按钮
-        self.start_all_button.setText(language_manager.get_text('start_download'))
+        # 更新顶部按钮（根据当前状态显示相应文本）
+        if self.is_downloading_active:
+            self.start_all_button.setText(language_manager.get_text('stop_download'))
+        else:
+            self.start_all_button.setText(language_manager.get_text('start_download'))
+        
         self.refresh_button.setText(language_manager.get_text('refresh_list'))
-        self.pause_all_button.setText(language_manager.get_text('pause_all'))
         self.settings_button.setText(language_manager.get_text('settings'))
 
         # 更新全局速度标签
@@ -776,3 +774,29 @@ class DownloadPage(QWidget):
             self.global_speed_label.setText(f"{language_manager.get_text('total_speed')}: {total_speed/1024:.2f} {language_manager.get_text('mb_per_second')}")
         else:
             self.global_speed_label.setText(f"{language_manager.get_text('total_speed')}: {total_speed:.1f} {language_manager.get_text('kb_per_second')}")
+
+    def show_download_error(self, work_id, error_msg):
+        """显示下载错误对话框"""
+        # 获取作品信息
+        work_title = "未知作品"
+        if work_id in self.download_items:
+            work_title = self.download_items[work_id].work_info.get('title', '未知作品')
+        
+        # 创建错误对话框
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Icon.Critical)
+        msg_box.setWindowTitle(language_manager.get_text('download_error'))
+        msg_box.setText(f"{language_manager.get_text('download_failed')}")
+        
+        # 详细信息
+        detail_text = f"作品: RJ{work_id} - {work_title}\n\n错误信息:\n{error_msg}\n\n下载队列已停止，请检查网络连接或稍后重试。"
+        msg_box.setDetailedText(detail_text)
+        
+        # 设置按钮
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        
+        # 更新状态标签
+        self.status_label.setText(f"{language_manager.get_text('error')}: RJ{work_id} {language_manager.get_text('download_failed')}")
+        
+        # 显示对话框
+        msg_box.exec()
