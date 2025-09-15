@@ -36,16 +36,25 @@ def get_down_list():
     else:
         proxy_url = None
 
-    req = requests.get(url, headers=headers, proxies=proxy_url).json()
-    id_list = []
+    try:
+        req = requests.get(url, headers=headers, proxies=proxy_url).json()
+        id_list = []
 
-    if req['works']:
-        data = req['works']
-        for work in data:
-            work_info = {
-                'id': work['id'],
-                'title': work['title'],
-            }
-            id_list.append(work_info)
+        # 检查响应是否包含works数据
+        if 'works' in req and req['works']:
+            data = req['works']
+            for work in data:
+                work_info = {
+                    'id': work['id'],
+                    'title': work['title'],
+                }
+                id_list.append(work_info)
 
-    return id_list
+        return id_list
+
+    except requests.exceptions.RequestException as e:
+        print(f"网络请求失败：{str(e)}")
+        return []
+    except Exception as e:
+        print(f"获取下载列表时发生错误：{str(e)}")
+        return []

@@ -159,12 +159,16 @@ def collect_audio_info(node, base_path, parent_folder=None):
             media_url = node.get("mediaDownloadUrl")
             # if parent_folder:
             #     parent_folder = parent_folder.re.sub(r'[\/\\:\*\?\<\>\|]', '-', parent_folder)
+            # 获取文件大小（如果API提供）
+            file_size = node.get("size", 0) or node.get("fileSize", 0) or node.get("streamSize", 0)
+
             results.append({
                 "file_type": node_type,
                 "folder_title": parent_folder,
                 "title": node_title,
                 "media_download_url": media_url,
-                "download_path": base_path
+                "download_path": base_path,
+                "file_size": file_size  # 添加文件大小字段
             })
 
         return results
@@ -262,10 +266,17 @@ def get_asmr_downlist_api(stop_event):
                 web_site = 'asmr-300.com'
 
             url = f"https://api.{web_site}/api/tracks/{keyword}?v=1"
-            req = requests.get(url).json()
 
-            # 解析下载信息
-            results = parse_req(req, work_title, download_path)
+            try:
+                req = requests.get(url).json()
+                # 解析下载信息
+                results = parse_req(req, work_title, download_path)
+            except requests.exceptions.RequestException as e:
+                print(f"网络请求失败 ({url}): {str(e)}")
+                continue
+            except Exception as e:
+                print(f"解析作品数据失败 (RJ{keyword:06d}): {str(e)}")
+                continue
             for idx, item in enumerate(results, start=1):
                 if stop_event.is_set():
                     print("检测到停止信号，终止下载")

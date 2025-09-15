@@ -225,8 +225,8 @@ class INDEX(QMainWindow):
         # 打开下载页面按钮
         self.down_list_page_button = QPushButton("down page", self.centralwidget)
         self.down_list_page_button.setGeometry(QtCore.QRect(280, 250, 80, 30))
-        # self.down_list_page_button.clicked.connect(self.down_stop)
-        self.down_list_page_button.setEnabled(False)
+        self.down_list_page_button.clicked.connect(self.open_download_page)
+        self.down_list_page_button.setEnabled(True)
 
 
         self.set_data()
@@ -418,7 +418,7 @@ class INDEX(QMainWindow):
         msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
         msg.exec()
         self.down_start_button.setEnabled(True)
-        self.down_list_page_button.setEnabled(False)
+        self.down_list_page_button.setEnabled(True)
 
         self.proxy_address.setEnabled(True)
         self.user_name.setEnabled(True)
@@ -489,3 +489,11 @@ class INDEX(QMainWindow):
     def on_download_finished(self, message):
         self.show_message_box(message, "下载完成")
         self.down_stop_button.setEnabled(False)
+
+    def open_download_page(self):
+        from src.UI.download_page import DownloadPage
+        if not hasattr(self, 'download_page') or not self.download_page:
+            self.download_page = DownloadPage()
+        self.download_page.show()
+        self.download_page.raise_()
+        self.download_page.activateWindow()

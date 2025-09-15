@@ -34,12 +34,23 @@ def login():
     else:
         proxy_url = None
 
-    req = requests.post(url, data=data, proxies=proxy_url).json()
-
     try:
-        if req['user']['loggedIn']:
+        req = requests.post(url, data=data, proxies=proxy_url).json()
+
+        # 检查响应是否包含用户信息
+        if 'user' in req and req['user']['loggedIn']:
             conf.write_asmr_token(req['user']['recommenderUuid'], req['token'])
             return True
-    except KeyError:
-        return req['error']
+
+        # 检查是否有错误信息
+        if 'error' in req:
+            return req['error']
+
+        # 如果响应结构不符合预期
+        return f"登录失败：响应格式异常 - {str(req)}"
+
+    except requests.exceptions.RequestException as e:
+        return f"网络请求失败：{str(e)}"
+    except Exception as e:
+        return f"登录过程中发生错误：{str(e)}"
 
