@@ -23,7 +23,6 @@ class ReadConf:
         if not os.path.exists(config_path):
             create_ini_file()
             
-        # 如果配置信息尚未加载，则加载配置文件
         if not ReadConf.config:
             ReadConf.config = self._load_config()
 
@@ -32,9 +31,6 @@ class ReadConf:
         config_path = self.get_config_path()
         self.config.read(config_path, encoding='utf-8')
         return self.config
-
-
-    # ================= 数据库配置相关方法 =================
     
     def check_DB(self):
         open_DB = self.config.get('database', 'open_DB')
@@ -56,9 +52,6 @@ class ReadConf:
             db = pymysql.connect(host=host, port=port, user=user, password=password, database=data_base)
             return db
 
-
-    # ================= 文件类型配置相关方法 =================
-    
     def read_downfile_type(self):
         file_types = ['MP3', 'MP4', 'FLAC', 'WAV', 'JPG', 'PNG', 'PDF', 'TXT', 'VTT', 'LRC']
         # 定义用于存储文件类型状态的字典
@@ -77,9 +70,6 @@ class ReadConf:
         config_path = self.get_config_path()
         with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
-
-
-    # ================= 文件夹命名配置相关方法 =================
     
     def read_name(self):
         folder_for_name = self.config.get('name', 'name')
@@ -90,9 +80,6 @@ class ReadConf:
         config_path = self.get_config_path()
         with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
-
-
-    # ================= 下载配置相关方法 =================
     
     def read_download_conf(self):
         speed_limit = float(self.config.get('down_conf', 'speed_limit'))

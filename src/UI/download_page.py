@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 from PyQt6 import QtCore, QtWidgets
 from src.asmr_api.get_down_list import get_down_list
 from src.asmr_api.get_work_detail import get_work_detail
+from src.asmr_api.works_review import review
 from src.download.download_thread import MultiFileDownloadManager
 from src.read_conf import ReadConf
 from src.language.language_manager import language_manager
@@ -161,6 +162,8 @@ class DownloadItemWidget(QWidget):
 
         self.is_downloading = True
         self.status_label.setText(language_manager.get_text('downloading'))
+        # 重置进度条样式，清除之前的错误状态样式
+        self.progress_bar.setStyleSheet("")
         return str(self.work_info['id']), self.work_detail
 
     def pause_download(self):
@@ -224,7 +227,6 @@ class DownloadItemWidget(QWidget):
     def set_error(self, error_msg):
         self.status_label.setText(f"{language_manager.get_text('error')}: {error_msg}")
         self.speed_label.setText("0 KB/s")
-        self.progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #ff6b6b; }")
         self.is_downloading = False
 
     def calculate_downloaded_size(self):
@@ -608,6 +610,14 @@ class DownloadPage(QWidget):
         if work_id in self.download_items:
             self.download_items[work_id].update_progress(100, 0, 0, language_manager.get_text('completed'))
         self.update_global_speed()
+
+        # 调用review函数更新作品状态
+        try:
+            check_db = self.conf.check_DB()
+            review(int(work_id), check_db)
+            print(f"已更新作品 RJ{work_id} 的状态")
+        except Exception as e:
+            print(f"更新作品状态失败: {str(e)}")
 
         # 检查是否还有等待中的下载任务
         if self.download_manager and len(self.download_manager.download_queue) > 0:
