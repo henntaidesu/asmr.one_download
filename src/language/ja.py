@@ -45,7 +45,7 @@ TRANSLATIONS = {
     "folder_naming": "フォルダ命名方式",
     "rj_naming": "RJ番号命名",
     "title_naming": "タイトル命名",
-    "rj_space_title_naming": "RJ番号 タイトル命名",
+    "rj_space_title_naming": "RJ番号 タイトル命名", 
     "rj_underscore_title_naming": "RJ番号_タイトル命名",
     "use_proxy": "プロキシを使用",
     "proxy_address": "プロキシアドレス",

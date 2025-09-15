@@ -221,19 +221,19 @@ def get_asmr_downlist_api(stop_event):
             work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', work["title"])
 
             # 根据配置调整文件夹命名方式
-            if folder_flag == 'RJ号命名':
+            if folder_flag == 'rj_naming':
                 if len(str(keyword)) > 6:
                     work_title = f'RJ{keyword:08d}'
                 else:
                     work_title = f'RJ{keyword:06d}'
 
-            elif folder_flag == 'RJ号 标题命名':
+            elif folder_flag == 'rj_space_title_naming':
                 if len(str(keyword)) > 6:
                     work_title = f'RJ{keyword:08d} {work_title}'
                 else:
                     work_title = f'RJ{keyword:06d} {work_title}'
 
-            elif folder_flag == 'RJ号_标题命名':
+            elif folder_flag == 'rj_underscore_title_naming':
                 if len(str(keyword)) > 6:
                     work_title = f'RJ{keyword:08d}_{work_title}'
                 else:

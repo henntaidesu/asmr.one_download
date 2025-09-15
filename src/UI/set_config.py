@@ -51,77 +51,78 @@ class SetConfig(QMainWindow):
 
         # 创建界面组件
         self.setWindowTitle(language_manager.get_text('app_title'))
-        self.setFixedSize(380, 260)  # 恢复原来大小
+        self.setFixedSize(400, 320)  # 增加窗口高度和宽度，提供更多空间
 
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
 
-        # 创建并配置 QLineEdit
+        # 创建并配置 QLineEdit - 第一行：下载路径
         self.down_path = QLineEdit(self.centralwidget)
-        self.down_path.setGeometry(QtCore.QRect(80, 10, 220, 30))
+        self.down_path.setGeometry(QtCore.QRect(80, 15, 240, 30))
         self.down_path.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.down_path.setPlaceholderText(language_manager.get_text('download_path'))
 
+        # 第二行：用户名和密码 - 增加间距
         self.user_name = QLineEdit(self.centralwidget)
-        self.user_name.setGeometry(QtCore.QRect(10, 50, 140, 30))
+        self.user_name.setGeometry(QtCore.QRect(10, 60, 140, 30))
         self.user_name.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.user_name.setPlaceholderText(language_manager.get_text('user_name'))
 
         self.password = QLineEdit(self.centralwidget)
-        self.password.setGeometry(QtCore.QRect(160, 50, 140, 30))
+        self.password.setGeometry(QtCore.QRect(160, 60, 140, 30))
         self.password.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.password.setPlaceholderText(language_manager.get_text('password'))
 
         # 下载限速
         self.speed_limit = QLineEdit(self.centralwidget)
-        self.speed_limit.setGeometry(QtCore.QRect(10, 10, 60, 30))
+        self.speed_limit.setGeometry(QtCore.QRect(10, 15, 60, 30))
         self.speed_limit.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.speed_limit.setPlaceholderText(language_manager.get_text('speed'))
         self.speed_limit.editingFinished.connect(self.save_speed_limit)
 
-        # 最大重试次数
+        # 第三行：最大重试次数和超时时间 - 增加间距
         self.max_retries = QLineEdit(self.centralwidget)
-        self.max_retries.setGeometry(QtCore.QRect(215, 90, 60, 30))
+        self.max_retries.setGeometry(QtCore.QRect(215, 105, 60, 30))
         self.max_retries.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.max_retries.setPlaceholderText(language_manager.get_text('max_retries'))
         self.max_retries.editingFinished.connect(self.save_max_retries)
         self.max_retries_label = QLabel(language_manager.get_text('times'), self.centralwidget)
-        self.max_retries_label.setGeometry(QtCore.QRect(270, 90, 30, 30))
+        self.max_retries_label.setGeometry(QtCore.QRect(280, 105, 30, 30))
         self.max_retries_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         #下载超时时间
         self.timeout = QLineEdit(self.centralwidget)
-        self.timeout.setGeometry(QtCore.QRect(295, 90, 50, 30))
+        self.timeout.setGeometry(QtCore.QRect(315, 105, 50, 30))
         self.timeout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.timeout.setPlaceholderText(language_manager.get_text('timeout'))
         self.timeout.editingFinished.connect(self.save_timeout)
         self.time_out_label = QLabel(language_manager.get_text('seconds'), self.centralwidget)
-        self.time_out_label.setGeometry(QtCore.QRect(320, 90, 75, 30))
+        self.time_out_label.setGeometry(QtCore.QRect(370, 105, 30, 30))
         self.time_out_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
-        # 文件命名方式标签
+        # 第三行：文件命名方式
         self.label = QLabel(language_manager.get_text('folder_naming'), self.centralwidget)
-        self.label.setGeometry(QtCore.QRect(10, 90, 90, 30))
+        self.label.setGeometry(QtCore.QRect(10, 105, 90, 30))
         self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         # 创建下拉选择框
         self.folder_name_type_combo_box = QComboBox(self.centralwidget)
-        self.folder_name_type_combo_box.setGeometry(QtCore.QRect(105, 90, 100, 30))
+        self.folder_name_type_combo_box.setGeometry(QtCore.QRect(105, 105, 100, 30))
         self.folder_name_type_combo_box.addItem(language_manager.get_text('rj_naming'))
         self.folder_name_type_combo_box.addItem(language_manager.get_text('title_naming'))
         self.folder_name_type_combo_box.addItem(language_manager.get_text('rj_space_title_naming'))
         self.folder_name_type_combo_box.addItem(language_manager.get_text('rj_underscore_title_naming'))
         self.folder_name_type_combo_box.currentTextChanged.connect(self.set_folder_for_name)
 
-        # 代理
+        # 第四行：代理设置 - 增加间距
         self.open_proxy = QCheckBox(language_manager.get_text('use_proxy'), self.centralwidget)
-        self.open_proxy.setGeometry(QtCore.QRect(10, 122, 100, 30))
+        self.open_proxy.setGeometry(QtCore.QRect(10, 150, 100, 30))
         self.open_proxy.setChecked(self.proxy_conf["open_proxy"])
         self.open_proxy.toggled.connect(self.save_open_proxy)
 
         # 创建代理下拉选择框
         self.set_proxy_type = QComboBox(self.centralwidget)
-        self.set_proxy_type.setGeometry(QtCore.QRect(105, 125, 75, 30))
+        self.set_proxy_type.setGeometry(QtCore.QRect(105, 150, 75, 30))
         self.set_proxy_type.addItem("http")
         self.set_proxy_type.addItem("https")
         self.set_proxy_type.addItem("socks5")
@@ -129,90 +130,89 @@ class SetConfig(QMainWindow):
         self.set_proxy_type.currentTextChanged.connect(self.save_proxy_type)
 
         self.proxy_address = QLineEdit(self.centralwidget)
-        self.proxy_address.setGeometry(QtCore.QRect(185, 125, 120, 30))
+        self.proxy_address.setGeometry(QtCore.QRect(185, 150, 120, 30))
         self.proxy_address.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.proxy_address.setPlaceholderText(language_manager.get_text('proxy_address'))
         self.proxy_address.editingFinished.connect(self.save_proxy_address)
 
         self.proxy_port = QLineEdit(self.centralwidget)
-        self.proxy_port.setGeometry(QtCore.QRect(310, 125, 60, 30))
+        self.proxy_port.setGeometry(QtCore.QRect(310, 150, 75, 30))
         self.proxy_port.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.proxy_port.setPlaceholderText(language_manager.get_text('port'))
         self.proxy_port.editingFinished.connect(self.save_proxy_port)
 
-        # 下载源
+        # 第五行：下载源 - 增加间距
         self.download_source_label = QLabel(language_manager.get_text('download_source'), self.centralwidget)
-        self.download_source_label.setGeometry(QtCore.QRect(10, 160, 60, 30))
-        self.max_retries_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.download_source_label.setGeometry(QtCore.QRect(10, 195, 60, 30))
+        self.download_source_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         self.file_download_source = QComboBox(self.centralwidget)
-        self.file_download_source.setGeometry(QtCore.QRect(75, 160, 100, 30))
+        self.file_download_source.setGeometry(QtCore.QRect(75, 195, 100, 30))
         self.file_download_source.addItem("Original")
         self.file_download_source.addItem("Mirror-1")
         self.file_download_source.addItem("Mirror-2")
         self.file_download_source.addItem("Mirror-3")
         self.file_download_source.currentTextChanged.connect(self.set_file_download_source)
 
-        # 选择性下载
-
-
+        # 第六行和第七行：文件类型选择 - 增加间距
         self.checkbox_MP3 = QCheckBox("MP3", self.centralwidget)
-        self.checkbox_MP3.setGeometry(QtCore.QRect(10, 190, 60, 30))
+        self.checkbox_MP3.setGeometry(QtCore.QRect(10, 240, 60, 30))
         self.checkbox_MP3.setChecked(self.selected_formats["MP3"])
         self.checkbox_MP3.toggled.connect(self.update_checkbox_MP3)
 
         self.checkbox_MP4 = QCheckBox("MP4", self.centralwidget)
-        self.checkbox_MP4.setGeometry(QtCore.QRect(70, 190, 60, 30))
+        self.checkbox_MP4.setGeometry(QtCore.QRect(80, 240, 60, 30))
         self.checkbox_MP4.setChecked(self.selected_formats["MP4"])
         self.checkbox_MP4.toggled.connect(self.update_checkbox_MP4)
 
         self.checkbox_FLAC = QCheckBox("FLAC", self.centralwidget)
-        self.checkbox_FLAC.setGeometry(QtCore.QRect(130, 190, 60, 30))
+        self.checkbox_FLAC.setGeometry(QtCore.QRect(150, 240, 60, 30))
         self.checkbox_FLAC.setChecked(self.selected_formats["FLAC"])
         self.checkbox_FLAC.toggled.connect(self.update_checkbox_FLAC)
 
         self.checkbox_WAV = QCheckBox("WAV", self.centralwidget)
-        self.checkbox_WAV.setGeometry(QtCore.QRect(190, 190, 60, 30))
+        self.checkbox_WAV.setGeometry(QtCore.QRect(220, 240, 60, 30))
         self.checkbox_WAV.setChecked(self.selected_formats["WAV"])
         self.checkbox_WAV.toggled.connect(self.update_checkbox_WAV)
 
         self.checkbox_JPG = QCheckBox("JPG", self.centralwidget)
-        self.checkbox_JPG.setGeometry(QtCore.QRect(250, 190, 60, 30))
+        self.checkbox_JPG.setGeometry(QtCore.QRect(290, 240, 60, 30))
         self.checkbox_JPG.setChecked(self.selected_formats["JPG"])
         self.checkbox_JPG.toggled.connect(self.update_checkbox_JPG)
 
         self.checkbox_PNG = QCheckBox("PNG", self.centralwidget)
-        self.checkbox_PNG.setGeometry(QtCore.QRect(310, 190, 60, 30))
+        self.checkbox_PNG.setGeometry(QtCore.QRect(10, 275, 60, 30))
         self.checkbox_PNG.setChecked(self.selected_formats["PNG"])
         self.checkbox_PNG.toggled.connect(self.update_checkbox_PNG)
 
         self.checkbox_PDF = QCheckBox("PDF", self.centralwidget)
-        self.checkbox_PDF.setGeometry(QtCore.QRect(10, 210, 60, 30))
+        self.checkbox_PDF.setGeometry(QtCore.QRect(80, 275, 60, 30))
         self.checkbox_PDF.setChecked(self.selected_formats["PDF"])
         self.checkbox_PDF.toggled.connect(self.update_checkbox_PDF)
 
         self.checkbox_TXT = QCheckBox("TXT", self.centralwidget)
-        self.checkbox_TXT.setGeometry(QtCore.QRect(70, 210, 60, 30))
+        self.checkbox_TXT.setGeometry(QtCore.QRect(150, 275, 60, 30))
         self.checkbox_TXT.setChecked(self.selected_formats["TXT"])
         self.checkbox_TXT.toggled.connect(self.update_checkbox_TXT)
 
         self.checkbox_VTT = QCheckBox("VTT", self.centralwidget)
-        self.checkbox_VTT.setGeometry(QtCore.QRect(130, 210, 60, 30))
+        self.checkbox_VTT.setGeometry(QtCore.QRect(220, 275, 60, 30))
         self.checkbox_VTT.setChecked(self.selected_formats["VTT"])
         self.checkbox_VTT.toggled.connect(self.update_checkbox_VTT)
 
         self.checkbox_LRC = QCheckBox("LRC", self.centralwidget)
-        self.checkbox_LRC.setGeometry(QtCore.QRect(190, 210, 60, 30))
+        self.checkbox_LRC.setGeometry(QtCore.QRect(290, 275, 60, 30))
         self.checkbox_LRC.setChecked(self.selected_formats["LRC"])
         self.checkbox_LRC.toggled.connect(self.update_checkbox_LCR)
 
-        # 登录按钮
+        # 按钮组
         self.user_conf_save_button = QPushButton(language_manager.get_text('login'), self.centralwidget)
-        self.user_conf_save_button.setGeometry(QtCore.QRect(310, 50, 60, 30))
+        self.user_conf_save_button.setGeometry(QtCore.QRect(310, 60, 70, 30))
         self.user_conf_save_button.clicked.connect(self.save_user)
+        
         # 设置下载路径按钮
         self.path_conf_save_button = QPushButton(language_manager.get_text('select'), self.centralwidget)
-        self.path_conf_save_button.setGeometry(QtCore.QRect(310, 10, 60, 30))
+        self.path_conf_save_button.setGeometry(QtCore.QRect(330, 15, 60, 30))
         self.path_conf_save_button.clicked.connect(self.save_download_path)
         # # 开始下载按钮
         # self.down_start_button = QPushButton("Start", self.centralwidget)
@@ -343,7 +343,15 @@ class SetConfig(QMainWindow):
         self.conf.write_timeout(timeout)
 
     def set_folder_for_name(self, text):
-        self.conf.write_folder_for_name(text)
+        # 将显示文本转换为对应的标识符
+        naming_map = {
+            language_manager.get_text('rj_naming'): 'rj_naming',
+            language_manager.get_text('title_naming'): 'title_naming', 
+            language_manager.get_text('rj_space_title_naming'): 'rj_space_title_naming',
+            language_manager.get_text('rj_underscore_title_naming'): 'rj_underscore_title_naming'
+        }
+        naming_key = naming_map.get(text, 'title_naming')  # 默认为标题命名
+        self.conf.write_folder_for_name(naming_key)
 
     def set_file_download_source(self, text):
         self.conf.write_website_course(text)
@@ -365,14 +373,16 @@ class SetConfig(QMainWindow):
         self.down_path.setText(down_conf['download_path'])
         self.max_retries.setText(str(down_conf['max_retries']))
         self.timeout.setText(str(down_conf['timeout']))
-        # 设置命名方式值
+        # 设置命名方式值 - 使用标识符映射到索引
         folder_for_name = self.conf.read_name()
-        if folder_for_name == "标题命名":
-            self.folder_name_type_combo_box.setCurrentIndex(1)
-        elif folder_for_name == "RJ号 标题命名":
-            self.folder_name_type_combo_box.setCurrentIndex(2)
-        elif folder_for_name == "RJ号_标题命名":
-            self.folder_name_type_combo_box.setCurrentIndex(2)
+        naming_index_map = {
+            'rj_naming': 0,
+            'title_naming': 1,
+            'rj_space_title_naming': 2,
+            'rj_underscore_title_naming': 3
+        }
+        index = naming_index_map.get(folder_for_name, 1)  # 默认为标题命名
+        self.folder_name_type_combo_box.setCurrentIndex(index)
         self.proxy_port.setText(str(self.proxy_conf['port']))
         self.proxy_address.setText(str(self.proxy_conf['host']))
         if self.proxy_conf['proxy_type'] == 'http':
