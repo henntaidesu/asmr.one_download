@@ -188,6 +188,22 @@ class ReadConf:
         with open('conf.ini', 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
+    def read_language_setting(self):
+        """读取语言设置"""
+        try:
+            language_code = self.config.get('language', 'current')
+            return language_code
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            return 'zh'  # 默认中文
+
+    def write_language_setting(self, language_code):
+        """写入语言设置"""
+        if not self.config.has_section('language'):
+            self.config.add_section('language')
+        self.config.set('language', 'current', language_code)
+        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+            self.config.write(configfile)
+
 def create_ini_file():
     config = configparser.ConfigParser()
 
@@ -245,6 +261,11 @@ def create_ini_file():
 
     config['mirror_site'] = {
         'site_source': 'Original',
+    }
+
+    # 配置语言设置
+    config['language'] = {
+        'current': 'zh',  # 默认中文
     }
 
     # 将配置写入文件
