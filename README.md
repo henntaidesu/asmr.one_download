@@ -1,4 +1,4 @@
-# 用于在ASMR.ONE中下载ASMR
+# 用于在ASMR.ONE中下载ASMR 现已支持 中文 英文 日语
 
 ## 使用说明
 
@@ -6,7 +6,7 @@
 
 ![DLsite_WEB](imge/asmr_onr.png)
 
-### 2# 启动程序
+### 2# 设置页面
 
 ![DLsite_WEB](imge/UI.png)
 
