@@ -85,8 +85,8 @@ class DownloadThread(QThread):
         else:
             proxy_url = None
 
-        # 计算总大小和已下载大小
-        total_size = sum(file_info['size'] for file_info in self.work_detail['files'])
+        # 直接使用API返回的总大小，始终不变
+        total_size = self.work_detail.get('total_size', 0)
         
         # 计算已下载的总大小（包括已存在的文件）
         total_downloaded = 0
@@ -101,10 +101,8 @@ class DownloadThread(QThread):
 
         print(f"开始下载: 总大小 {total_size} bytes, 已下载 {total_downloaded} bytes")
         
-        # 发送初始进度更新
-        initial_progress = int((total_downloaded / total_size) * 100) if total_size > 0 else 0
-        self.progress_updated.emit(initial_progress, total_downloaded, total_size, "准备下载...")
-
+        # 不发送初始进度更新，避免覆盖界面已显示的正确大小
+        
         for file_info in self.work_detail['files']:
             if self.is_cancelled:
                 return
@@ -130,7 +128,7 @@ class DownloadThread(QThread):
 
                 response = requests.get(download_url, headers=headers, stream=True, proxies=proxy_url)
                 response.raise_for_status()
-
+                
                 with open(file_path, 'ab' if file_downloaded > 0 else 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         if self.is_cancelled:
@@ -149,7 +147,7 @@ class DownloadThread(QThread):
                             file_downloaded += chunk_size
                             total_downloaded += chunk_size
 
-                            # 更新进度
+                            # 更新进度（使用API返回的总大小）
                             progress = int((total_downloaded / total_size) * 100) if total_size > 0 else 0
                             self.progress_updated.emit(progress, total_downloaded, total_size, "下载中...")
 
@@ -174,6 +172,7 @@ class DownloadThread(QThread):
                 return
 
         if not self.is_cancelled:
+            # 使用API返回的总大小
             self.progress_updated.emit(100, total_size, total_size, "下载完成")
             self.download_finished.emit(self.work_id)
 

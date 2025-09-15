@@ -133,34 +133,39 @@ class DownloadItemWidget(QWidget):
         """作品详细信息加载完成"""
         self.work_detail = work_detail
         if work_detail:
-            # 检查已下载的文件并计算初始进度
-            total_size = work_detail['total_size']
-            downloaded_size = self.calculate_downloaded_size()
-            
-            # 计算初始进度
-            initial_progress = int((downloaded_size / total_size) * 100) if total_size > 0 else 0
-            self.progress_bar.setValue(initial_progress)
-            
-            # 使用统一的format_bytes方法格式化显示
-            downloaded_formatted = self.format_bytes(downloaded_size)
-            total_size_formatted = self.format_bytes(total_size)
-            self.size_label.setText(f"{downloaded_formatted}/{total_size_formatted}")
-            
+            self.update_initial_progress()
             self.start_button.setEnabled(True)
-            
-            if initial_progress == 100:
-                self.status_label.setText(language_manager.get_text('completed'))
-                self.start_button.setEnabled(False)
-            elif downloaded_size > 0:
-                self.status_label.setText(f"{language_manager.get_text('ready_to_download')} - 已下载 {initial_progress}%")
-            else:
-                self.status_label.setText(f"{language_manager.get_text('ready_to_download')} ({len(work_detail['files'])} {language_manager.get_text('files')})")
-            
             # 通知父窗口检查是否可以启用全局开始按钮
             self.detail_ready.emit()
         else:
             self.size_label.setText(language_manager.get_text('failed_to_get'))
             self.status_label.setText(language_manager.get_text('get_file_info_failed'))
+
+    def update_initial_progress(self):
+        """更新初始进度显示"""
+        if not self.work_detail:
+            return
+            
+        # 检查已下载的文件并计算初始进度
+        total_size = self.work_detail['total_size']
+        downloaded_size = self.calculate_downloaded_size()
+        
+        # 计算初始进度
+        initial_progress = int((downloaded_size / total_size) * 100) if total_size > 0 else 0
+        self.progress_bar.setValue(initial_progress)
+        
+        # 使用统一的format_bytes方法格式化显示
+        downloaded_formatted = self.format_bytes(downloaded_size)
+        total_size_formatted = self.format_bytes(total_size)
+        self.size_label.setText(f"{downloaded_formatted}/{total_size_formatted}")
+        
+        if initial_progress == 100:
+            self.status_label.setText(language_manager.get_text('completed'))
+            self.start_button.setEnabled(False)
+        elif downloaded_size > 0:
+            self.status_label.setText(f"{language_manager.get_text('ready_to_download')} - 已下载 {initial_progress}%")
+        else:
+            self.status_label.setText(f"{language_manager.get_text('ready_to_download')} ({len(self.work_detail['files'])} {language_manager.get_text('files')})")
 
     def on_detail_error(self, error_msg):
         """作品详细信息加载错误"""
@@ -205,14 +210,17 @@ class DownloadItemWidget(QWidget):
     def update_progress(self, progress, downloaded_bytes=0, total_bytes=0, status="下载中..."):
         self.progress_bar.setValue(progress)
 
-        # 更新下载量信息
-        if total_bytes > 0:
+        # 更新下载量信息，但总大小始终使用API返回的原始值
+        if downloaded_bytes >= 0 and self.work_detail:
             self.bytes_downloaded = downloaded_bytes
-            self.total_bytes = total_bytes
-
-            # 使用统一的format_bytes方法更新文件大小显示
+            
+            # 始终使用API返回的原始总大小，忽略传入的total_bytes
+            original_total_size = self.work_detail['total_size']
+            self.total_bytes = original_total_size
+            
+            # 使用API返回的原始总大小更新显示
             downloaded_formatted = self.format_bytes(downloaded_bytes)
-            total_formatted = self.format_bytes(total_bytes)
+            total_formatted = self.format_bytes(original_total_size)
             self.size_label.setText(f"{downloaded_formatted}/{total_formatted}")
 
         if not self.is_paused:
