@@ -71,18 +71,30 @@ def get_work_detail(work_id):
                     folder_path = f"{prefix_path}/{item.get('title', '')}" if prefix_path else item.get('title', '')
                     process_items(item['children'], folder_path)
                 elif item.get('mediaDownloadUrl'):
-                    # 处理文件
-                    file_size = item.get('size', 0)
+                    # 处理文件 - 尝试多种字段获取文件大小
+                    file_size = (
+                        item.get('size', 0) or 
+                        item.get('fileSize', 0) or 
+                        item.get('streamSize', 0) or 
+                        item.get('contentLength', 0)
+                    )
+                    
+                    print(f"文件: {item.get('title', '未知')} - API返回大小: {file_size}")
 
                     # 如果API没有提供文件大小，尝试通过HEAD请求获取
                     if file_size == 0:
                         try:
+                            print(f"尝试通过HEAD请求获取文件大小: {item.get('title', '未知')}")
                             head_response = requests.head(item.get('mediaDownloadUrl'),
-                                                        headers=headers, proxies=proxy_url, timeout=10)
+                                                        headers=headers, proxies=proxy_url, timeout=15)
                             content_length = head_response.headers.get('content-length')
                             if content_length:
                                 file_size = int(content_length)
-                        except:
+                                print(f"HEAD请求获得文件大小: {file_size} bytes")
+                            else:
+                                print(f"HEAD请求未返回Content-Length头部")
+                        except Exception as e:
+                            print(f"HEAD请求失败: {str(e)}")
                             file_size = 0  # 如果获取失败，保持为0
 
                     file_info = {
@@ -99,6 +111,20 @@ def get_work_detail(work_id):
 
         # 处理所有文件和文件夹
         process_items(tracks_data)
+        
+        # 打印调试信息
+        print(f"作品 {work_detail['id']} 文件统计:")
+        print(f"  总文件数: {len(work_detail['files'])}")
+        print(f"  总大小: {work_detail['total_size']} bytes ({work_detail['total_size'] / (1024*1024):.2f} MB)")
+        
+        # 统计大小为0的文件数量
+        zero_size_files = [f for f in work_detail['files'] if f['size'] == 0]
+        if zero_size_files:
+            print(f"  警告: {len(zero_size_files)} 个文件大小为0:")
+            for f in zero_size_files[:5]:  # 只显示前5个
+                print(f"    - {f['title']}")
+            if len(zero_size_files) > 5:
+                print(f"    ... 还有 {len(zero_size_files)-5} 个文件")
 
         return work_detail
 

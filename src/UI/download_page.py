@@ -133,10 +133,29 @@ class DownloadItemWidget(QWidget):
         """作品详细信息加载完成"""
         self.work_detail = work_detail
         if work_detail:
-            total_mb = work_detail['total_size'] / (1024 * 1024)
-            self.size_label.setText(f"0/{total_mb:.1f} MB")
+            # 检查已下载的文件并计算初始进度
+            total_size = work_detail['total_size']
+            downloaded_size = self.calculate_downloaded_size()
+            
+            # 计算初始进度
+            initial_progress = int((downloaded_size / total_size) * 100) if total_size > 0 else 0
+            self.progress_bar.setValue(initial_progress)
+            
+            # 使用统一的format_bytes方法格式化显示
+            downloaded_formatted = self.format_bytes(downloaded_size)
+            total_size_formatted = self.format_bytes(total_size)
+            self.size_label.setText(f"{downloaded_formatted}/{total_size_formatted}")
+            
             self.start_button.setEnabled(True)
-            self.status_label.setText(f"{language_manager.get_text('ready_to_download')} ({len(work_detail['files'])} {language_manager.get_text('files')})")
+            
+            if initial_progress == 100:
+                self.status_label.setText(language_manager.get_text('completed'))
+                self.start_button.setEnabled(False)
+            elif downloaded_size > 0:
+                self.status_label.setText(f"{language_manager.get_text('ready_to_download')} - 已下载 {initial_progress}%")
+            else:
+                self.status_label.setText(f"{language_manager.get_text('ready_to_download')} ({len(work_detail['files'])} {language_manager.get_text('files')})")
+            
             # 通知父窗口检查是否可以启用全局开始按钮
             self.detail_ready.emit()
         else:
@@ -191,10 +210,10 @@ class DownloadItemWidget(QWidget):
             self.bytes_downloaded = downloaded_bytes
             self.total_bytes = total_bytes
 
-            # 更新文件大小显示
-            downloaded_mb = downloaded_bytes / (1024 * 1024)
-            total_mb = total_bytes / (1024 * 1024)
-            self.size_label.setText(f"{downloaded_mb:.1f}/{total_mb:.1f} MB")
+            # 使用统一的format_bytes方法更新文件大小显示
+            downloaded_formatted = self.format_bytes(downloaded_bytes)
+            total_formatted = self.format_bytes(total_bytes)
+            self.size_label.setText(f"{downloaded_formatted}/{total_formatted}")
 
         if not self.is_paused:
             self.status_label.setText(status)
@@ -210,7 +229,7 @@ class DownloadItemWidget(QWidget):
         """更新下载速度显示"""
         self.download_speed = speed_kbps
         if speed_kbps >= 1024:
-            self.speed_label.setText(f"{speed_kbps/1024:.1f} MB/s")
+            self.speed_label.setText(f"{speed_kbps/1024:.2f} MB/s")
         else:
             self.speed_label.setText(f"{speed_kbps:.1f} KB/s")
 
@@ -225,16 +244,60 @@ class DownloadItemWidget(QWidget):
         self.pause_button.setEnabled(False)
         self.progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #ff6b6b; }")
 
+    def calculate_downloaded_size(self):
+        """计算已下载的文件大小"""
+        if not self.work_detail:
+            return 0
+            
+        downloaded_size = 0
+        from src.read_conf import ReadConf
+        conf = ReadConf()
+        download_conf = conf.read_download_conf()
+        download_dir = download_conf['download_path']
+        
+        # 根据文件夹命名方式获取实际文件夹路径
+        folder_for_name = conf.read_name()
+        work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', self.work_info['title'])
+        work_id = self.work_info['id']
+        
+        if folder_for_name == 'rj_naming':
+            folder_name = f'RJ{work_id:08d}' if len(str(work_id)) > 6 else f'RJ{work_id:06d}'
+        elif folder_for_name == 'title_naming':
+            folder_name = work_title
+        elif folder_for_name == 'rj_space_title_naming':
+            folder_name = f'RJ{work_id:08d} {work_title}' if len(str(work_id)) > 6 else f'RJ{work_id:06d} {work_title}'
+        elif folder_for_name == 'rj_underscore_title_naming':
+            folder_name = f'RJ{work_id:08d}_{work_title}' if len(str(work_id)) > 6 else f'RJ{work_id:06d}_{work_title}'
+        else:
+            folder_name = work_title
+            
+        work_download_dir = os.path.join(download_dir, folder_name)
+        
+        if os.path.exists(work_download_dir):
+            for file_info in self.work_detail['files']:
+                file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_info['title'])
+                file_path = os.path.join(work_download_dir, file_title)
+                
+                if os.path.exists(file_path):
+                    actual_size = os.path.getsize(file_path)
+                    expected_size = file_info['size']
+                    # 取实际大小和期望大小的最小值，避免超过文件实际大小
+                    downloaded_size += min(actual_size, expected_size)
+        
+        return downloaded_size
+
     def format_bytes(self, bytes_value):
         """格式化字节数为可读格式"""
-        if bytes_value >= 1024 * 1024 * 1024:
-            return f"{bytes_value / (1024 * 1024 * 1024):.1f} GB"
+        if bytes_value == 0:
+            return "0 B"
+        elif bytes_value >= 1024 * 1024 * 1024:
+            return f"{bytes_value / (1024 * 1024 * 1024):.2f} GB"
         elif bytes_value >= 1024 * 1024:
-            return f"{bytes_value / (1024 * 1024):.1f} MB"
+            return f"{bytes_value / (1024 * 1024):.2f} MB"
         elif bytes_value >= 1024:
             return f"{bytes_value / 1024:.1f} KB"
         else:
-            return f"{bytes_value} B"
+            return f"{int(bytes_value)} B"
 
     def update_language(self):
         """更新语言显示"""
@@ -674,6 +737,6 @@ class DownloadPage(QWidget):
                 total_speed += item.download_speed
 
         if total_speed >= 1024:
-            self.global_speed_label.setText(f"{language_manager.get_text('total_speed')}: {total_speed/1024:.1f} {language_manager.get_text('mb_per_second')}")
+            self.global_speed_label.setText(f"{language_manager.get_text('total_speed')}: {total_speed/1024:.2f} {language_manager.get_text('mb_per_second')}")
         else:
             self.global_speed_label.setText(f"{language_manager.get_text('total_speed')}: {total_speed:.1f} {language_manager.get_text('kb_per_second')}")

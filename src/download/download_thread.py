@@ -85,26 +85,43 @@ class DownloadThread(QThread):
         else:
             proxy_url = None
 
-        total_downloaded = 0
+        # 计算总大小和已下载大小
         total_size = sum(file_info['size'] for file_info in self.work_detail['files'])
+        
+        # 计算已下载的总大小（包括已存在的文件）
+        total_downloaded = 0
+        for file_info in self.work_detail['files']:
+            filename = self.sanitize_filename(file_info['title'])
+            file_path = os.path.join(self.download_dir, filename)
+            if os.path.exists(file_path):
+                downloaded_size = os.path.getsize(file_path)
+                # 确保不超过文件实际大小
+                downloaded_size = min(downloaded_size, file_info['size'])
+                total_downloaded += downloaded_size
+
+        print(f"开始下载: 总大小 {total_size} bytes, 已下载 {total_downloaded} bytes")
+        
+        # 发送初始进度更新
+        initial_progress = int((total_downloaded / total_size) * 100) if total_size > 0 else 0
+        self.progress_updated.emit(initial_progress, total_downloaded, total_size, "准备下载...")
 
         for file_info in self.work_detail['files']:
             if self.is_cancelled:
                 return
 
-            file_downloaded = 0
             file_size = file_info['size']
             download_url = file_info['download_url']
             filename = self.sanitize_filename(file_info['title'])
-
             file_path = os.path.join(self.download_dir, filename)
 
-            # 检查文件是否已存在
+            # 检查文件是否已存在并完整
             if os.path.exists(file_path):
                 file_downloaded = os.path.getsize(file_path)
                 if file_downloaded >= file_size:
-                    total_downloaded += file_size
+                    print(f"文件已完整下载，跳过: {filename}")
                     continue
+            else:
+                file_downloaded = 0
 
             try:
                 headers = {}
