@@ -150,7 +150,7 @@ class MultiFileDownloadManager(QThread):
         self.download_dir = download_dir
         self.download_queue = []
         self.active_downloads = {}
-        self.max_concurrent = 3  # 最大并发下载数
+        self.max_concurrent = 1  # 顺序下载，一次只下载一个
 
     def add_download(self, work_id, work_detail):
         """添加下载任务到队列"""

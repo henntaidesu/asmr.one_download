@@ -297,10 +297,10 @@ class DownloadPage(QWidget):
         self.global_speed_label.setStyleSheet("color: #0066cc; font-weight: bold;")
         top_layout.addWidget(self.global_speed_label)
 
-        # 开始全部下载按钮
-        self.start_all_button = QPushButton("开始全部下载")
+        # 开始下载按钮
+        self.start_all_button = QPushButton("开始下载")
         self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
-        self.start_all_button.clicked.connect(self.start_all_downloads)
+        self.start_all_button.clicked.connect(self.start_sequential_downloads)
         self.start_all_button.setEnabled(False)
         top_layout.addWidget(self.start_all_button)
 
@@ -314,10 +314,10 @@ class DownloadPage(QWidget):
         self.pause_all_button.clicked.connect(self.pause_all_downloads)
         top_layout.addWidget(self.pause_all_button)
 
-        # 清空列表按钮
-        self.clear_button = QPushButton("清空列表")
-        self.clear_button.clicked.connect(self.clear_completed)
-        top_layout.addWidget(self.clear_button)
+        # 设置按钮
+        self.settings_button = QPushButton("设置")
+        self.settings_button.clicked.connect(self.open_settings)
+        top_layout.addWidget(self.settings_button)
 
         layout.addLayout(top_layout)
 
@@ -435,7 +435,15 @@ class DownloadPage(QWidget):
     def on_download_completed(self, work_id):
         """下载完成"""
         print(f"下载完成: {work_id}")
+        if work_id in self.download_items:
+            self.download_items[work_id].update_progress(100, 0, 0, "下载完成")
         self.update_global_speed()
+
+        # 检查是否还有等待中的下载任务
+        if self.download_manager and len(self.download_manager.download_queue) > 0:
+            self.status_label.setText(f"下载完成: RJ{work_id}, 继续下一个...")
+        else:
+            self.status_label.setText("所有下载任务已完成")
 
     def on_download_failed(self, work_id, error):
         """下载失败"""
@@ -466,11 +474,41 @@ class DownloadPage(QWidget):
             self.download_manager.cancel_download(item_id)
         self.update_global_speed()
 
-    def start_all_downloads(self):
-        """开始所有准备好的下载"""
-        for item_id, item in self.download_items.items():
-            if not item.is_downloading and item.start_button.isEnabled() and item.work_detail:
-                item.start_download()
+    def check_start_all_button(self):
+        """检查是否应该启用开始全部下载按钮"""
+        ready_count = 0
+        for item in self.download_items.values():
+            if item.work_detail and item.start_button.isEnabled() and not item.is_downloading:
+                ready_count += 1
+
+        # 如果有准备好的下载项，启用按钮
+        self.start_all_button.setEnabled(ready_count > 0)
+
+    def start_sequential_downloads(self):
+        """按顺序开始下载"""
+        # 获取所有准备好的下载项，按添加顺序排列
+        ready_items = []
+        for i in range(self.download_layout.count() - 1):  # 排除最后的stretch
+            widget = self.download_layout.itemAt(i).widget()
+            if isinstance(widget, DownloadItemWidget):
+                if (not widget.is_downloading and
+                    widget.start_button.isEnabled() and
+                    widget.work_detail):
+                    ready_items.append(widget)
+
+        if ready_items:
+            # 开始第一个下载
+            first_item = ready_items[0]
+            first_item.start_download()
+
+            # 将剩余的添加到队列
+            for item in ready_items[1:]:
+                if self.download_manager:
+                    self.download_manager.add_download(int(item.work_info['id']), item.work_detail)
+
+            self.status_label.setText(f"开始按顺序下载，共 {len(ready_items)} 个任务")
+        else:
+            self.status_label.setText("没有可开始的下载任务")
 
     def pause_all_downloads(self):
         for item_id, item in self.download_items.items():
@@ -479,20 +517,15 @@ class DownloadPage(QWidget):
                 if self.download_manager:
                     self.download_manager.pause_download(item_id)
 
-    def clear_completed(self):
-        # 移除已完成或已取消的下载项
-        to_remove = []
-        for item_id, item in self.download_items.items():
-            if item.progress_bar.value() == 100 or not item.cancel_button.isEnabled():
-                to_remove.append(item_id)
 
-        for item_id in to_remove:
-            item = self.download_items[item_id]
-            self.download_layout.removeWidget(item)
-            item.deleteLater()
-            del self.download_items[item_id]
-
-        self.count_label.setText(f"总数: {len(self.download_items)}")
+    def open_settings(self):
+        """打开设置页面"""
+        from src.UI.index import INDEX
+        if not hasattr(self, 'settings_page') or not self.settings_page:
+            self.settings_page = INDEX()
+        self.settings_page.show()
+        self.settings_page.raise_()
+        self.settings_page.activateWindow()
 
     def update_global_speed(self):
         """更新全局下载速度"""
