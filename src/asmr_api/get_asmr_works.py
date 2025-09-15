@@ -3,7 +3,7 @@ import os
 import time
 import requests
 from tqdm import tqdm
-# from src.UI.index import INDEX
+# from src.UI.set_config import SetConfig
 from src.read_conf import ReadConf
 from http.client import IncompleteRead
 

@@ -38,7 +38,7 @@ class DownloadThread(QThread):
         self.stop_event.set()  # 设置停止标志
 
 
-class INDEX(QMainWindow):
+class SetConfig(QMainWindow):
     def __init__(self):
         super().__init__()
 

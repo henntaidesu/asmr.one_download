@@ -520,9 +520,9 @@ class DownloadPage(QWidget):
 
     def open_settings(self):
         """打开设置页面"""
-        from src.UI.index import INDEX
+        from src.UI.set_config import SetConfig
         if not hasattr(self, 'settings_page') or not self.settings_page:
-            self.settings_page = INDEX()
+            self.settings_page = SetConfig()
         self.settings_page.show()
         self.settings_page.raise_()
         self.settings_page.activateWindow()
