@@ -267,6 +267,8 @@ def get_asmr_downlist_api(stop_event):
 
             url = f"https://api.{web_site}/api/tracks/{keyword}?v=1"
 
+            print(url)
+
             try:
                 req = requests.get(url).json()
                 # 解析下载信息
