@@ -1,13 +1,26 @@
 import os
+import sys
 import configparser
 import pymysql
 
 
 class ReadConf:
     config = None
+    
+    @staticmethod
+    def get_config_path():
+        """获取配置文件的完整路径，支持exe打包"""
+        if getattr(sys, 'frozen', False):
+            # 打包为exe时，使用exe所在目录
+            base_path = os.path.dirname(sys.executable)
+        else:
+            # 开发环境，使用项目根目录
+            base_path = os.getcwd()
+        return os.path.join(base_path, 'conf.ini')
 
     def __init__(self):
-        if not os.path.exists('conf.ini'):
+        config_path = self.get_config_path()
+        if not os.path.exists(config_path):
             create_ini_file()
             
         # 如果配置信息尚未加载，则加载配置文件
@@ -16,7 +29,8 @@ class ReadConf:
 
     def _load_config(self):
         self.config = configparser.ConfigParser()
-        self.config.read('conf.ini', encoding='utf-8')
+        config_path = self.get_config_path()
+        self.config.read(config_path, encoding='utf-8')
         return self.config
 
 
@@ -60,7 +74,8 @@ class ReadConf:
 
     def write_downfile_type(self, item_type, flag):
         self.config.set('file_type', item_type, flag)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
 
@@ -72,7 +87,8 @@ class ReadConf:
 
     def write_folder_for_name(self, name):
         self.config.set('name', 'name', name)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
 
@@ -100,23 +116,27 @@ class ReadConf:
 
     def write_speed_limit(self, speed_limit):
         self.config.set('down_conf', 'speed_limit', speed_limit)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
     def write_max_retries(self, max_retries):
         self.config.set('down_conf', 'max_retries', max_retries)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
     def write_timeout(self, timeout):
         self.config.set('down_conf', 'timeout', timeout)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
 
     def write_download_conf_(self, download_path):
         self.config.set('down_conf', 'download_path', download_path)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
 
@@ -136,20 +156,23 @@ class ReadConf:
     def write_asmr_username(self, username, passwd):
         self.config.set('user', 'username', username)
         self.config.set('user', 'passwd', passwd)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
     def write_asmr_token(self, recommenderUuid, token):
         self.config.set('user', 'recommenderUuid', recommenderUuid)
         self.config.set('user', 'token', token)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
 
     def write_download_conf(self, speed_limit, download_path):
         self.config.set('down_conf', 'speed_limit', speed_limit)
         self.config.set('down_conf', 'download_path', download_path)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
     def read_proxy_conf(self):
@@ -170,17 +193,20 @@ class ReadConf:
 
     def write_proxy_host(self, proxy_host):
         self.config.set('proxy', 'host', proxy_host)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
     def write_proxy_port(self, proxy_port):
         self.config.set('proxy', 'port', proxy_port)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
     def write_proxy_type(self, proxy_type):
         self.config.set('proxy', 'type', proxy_type)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
     def write_open_proxy(self, open_proxy):
@@ -189,7 +215,8 @@ class ReadConf:
         # else:
         #     open_proxy = 'False'
         self.config.set('proxy', 'open_proxy', open_proxy)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
     def read_website_course(self):
@@ -198,7 +225,8 @@ class ReadConf:
 
     def write_website_course(self, site_source):
         self.config.set('mirror_site', 'site_source', site_source)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
     def read_language_setting(self):
@@ -214,18 +242,40 @@ class ReadConf:
         if not self.config.has_section('language'):
             self.config.add_section('language')
         self.config.set('language', 'current', language_code)
-        with open('conf.ini', 'w', encoding='utf-8') as configfile:
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
 def create_ini_file():
     config = configparser.ConfigParser()
+    
+    # 获取安全的默认下载路径
+    try:
+        # 优先使用用户名
+        default_path = f'C:/Users/{os.getlogin()}/Downloads'
+    except:
+        try:
+            # 备选方案1: 使用环境变量
+            user_profile = os.environ.get('USERPROFILE', '')
+            if user_profile:
+                default_path = os.path.join(user_profile, 'Downloads').replace('\\', '/')
+            else:
+                # 备选方案2: 使用exe所在目录的downloads文件夹
+                if getattr(sys, 'frozen', False):
+                    base_path = os.path.dirname(sys.executable)
+                else:
+                    base_path = os.getcwd()
+                default_path = os.path.join(base_path, 'downloads').replace('\\', '/')
+        except:
+            # 最终备选方案
+            default_path = './downloads'
 
     # 配置 [down_conf] 部分
     config['down_conf'] = {
         'speed_limit': '10',
         'max_retries': '10',
         'timeout': '10',
-        'download_path': f'C:/Users/{os.getlogin()}/Downloads',
+        'download_path': default_path,
         'min_speed': '256',
         'min_speed_check': '30',
     }
@@ -282,5 +332,6 @@ def create_ini_file():
     }
 
     # 将配置写入文件
-    with open('conf.ini', 'w', encoding='utf-8') as configfile:
+    config_path = ReadConf.get_config_path()
+    with open(config_path, 'w', encoding='utf-8') as configfile:
         config.write(configfile)

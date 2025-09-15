@@ -64,5 +64,7 @@ TRANSLATIONS = {
     "api_error": "APIリクエストが失敗しました",
     "json_parse_error": "データ解析に失敗しました",
     "empty_list": "ダウンロード項目が見つかりません",
-    "relogin_required": "設定ページで再ログインしてください"
+    "relogin_required": "設定ページで再ログインしてください",
+    "please_enter_username_password": "ユーザー名とパスワードを入力してください",
+    "logging_in": "ログイン中..."
 }

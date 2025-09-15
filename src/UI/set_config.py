@@ -1,7 +1,7 @@
 import re
 from xmlrpc.client import ServerProxy
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QThread, pyqtSignal, QTimer
 from PyQt6.QtWidgets import (
     QMainWindow,
     QPushButton,
@@ -37,6 +37,35 @@ class DownloadThread(QThread):
 
     def stop(self):
         self.stop_event.set()  # 设置停止标志
+
+
+class LoginThread(QThread):
+    """异步登录线程，避免阻塞主界面"""
+    login_finished = pyqtSignal(bool, str)  # success, message
+    
+    def __init__(self, username, password):
+        super().__init__()
+        self.username = username
+        self.password = password
+    
+    def run(self):
+        try:
+            # 先保存用户名和密码到配置文件
+            from src.read_conf import ReadConf
+            conf = ReadConf()
+            conf.write_asmr_username(self.username, self.password)
+            
+            # 执行登录
+            from src.asmr_api.login import login
+            result = login()
+            
+            if result is True:
+                self.login_finished.emit(True, "登录成功")
+            else:
+                self.login_finished.emit(False, str(result))
+                
+        except Exception as e:
+            self.login_finished.emit(False, f"登录过程中发生错误：{str(e)}")
 
 
 class SetConfig(QMainWindow):
@@ -410,16 +439,34 @@ class SetConfig(QMainWindow):
             self.conf.write_download_conf(speed_limit, download_path)
 
     def save_user(self):
-        from src.asmr_api.login import login
-
         user_name = self.user_name.text()
         password = self.password.text()
-        self.conf.write_asmr_username(user_name, password)
-        message = login()
-        if message is not True:
-            self.show_message_box(message, "from asmr.one")
-        else:
+        
+        # 检查用户名和密码是否为空
+        if not user_name or not password:
+            self.show_message_box(language_manager.get_text('please_enter_username_password'), "验证失败")
+            return
+        
+        # 禁用登录按钮，防止重复点击
+        self.user_conf_save_button.setEnabled(False)
+        self.user_conf_save_button.setText(language_manager.get_text('logging_in'))
+        
+        # 创建登录线程
+        self.login_thread = LoginThread(user_name, password)
+        self.login_thread.login_finished.connect(self.on_login_finished)
+        self.login_thread.finished.connect(self.login_thread.deleteLater)
+        self.login_thread.start()
+    
+    def on_login_finished(self, success, message):
+        """登录完成回调"""
+        # 恢复登录按钮状态
+        self.user_conf_save_button.setEnabled(True)
+        self.user_conf_save_button.setText(language_manager.get_text('login'))
+        
+        if success:
             self.show_message_box(language_manager.get_text('login_success'), "from asmr.one")
+        else:
+            self.show_message_box(message, "from asmr.one")
 
     def show_message_box(self, message, message_from):
         msg = QMessageBox()

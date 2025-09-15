@@ -212,6 +212,13 @@ class DownloadItemWidget(QWidget):
 
         # 更新下载量信息，但总大小始终使用API返回的原始值
         if downloaded_bytes >= 0 and self.work_detail:
+            # 确保 downloaded_bytes 是数字类型，支持超大数值
+            if isinstance(downloaded_bytes, str):
+                try:
+                    downloaded_bytes = int(downloaded_bytes)
+                except ValueError:
+                    downloaded_bytes = 0
+            
             self.bytes_downloaded = downloaded_bytes
             
             # 始终使用API返回的原始总大小，忽略传入的total_bytes
@@ -281,28 +288,49 @@ class DownloadItemWidget(QWidget):
             
         work_download_dir = os.path.join(download_dir, folder_name)
         
-        if os.path.exists(work_download_dir):
-            for file_info in self.work_detail['files']:
-                file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_info['title'])
-                file_path = os.path.join(work_download_dir, file_title)
-                
-                if os.path.exists(file_path):
-                    actual_size = os.path.getsize(file_path)
-                    expected_size = file_info['size']
-                    # 取实际大小和期望大小的最小值，避免超过文件实际大小
-                    downloaded_size += min(actual_size, expected_size)
+        try:
+            if os.path.exists(work_download_dir):
+                for file_info in self.work_detail['files']:
+                    file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_info['title'])
+                    file_path = os.path.join(work_download_dir, file_title)
+                    
+                    if os.path.exists(file_path):
+                        # 使用os.path.getsize获取实际文件大小，支持大文件
+                        actual_size = os.path.getsize(file_path)
+                        expected_size = file_info.get('size', 0)
+                        # 确保expected_size是数字类型，支持超大数值
+                        if isinstance(expected_size, str):
+                            try:
+                                expected_size = int(expected_size)
+                            except ValueError:
+                                expected_size = 0
+                        
+                        # 取实际大小和期望大小的最小值，避免超过文件实际大小
+                        downloaded_size += min(actual_size, expected_size)
+        except Exception as e:
+            print(f"计算已下载大小时出错: {e}")
+            return 0
         
         return downloaded_size
 
     def format_bytes(self, bytes_value):
-        """格式化字节数为可读格式"""
+        """格式化字节数为可读格式，支持超大文件(>100GB)"""
+        # 确保 bytes_value 是数字类型
+        if isinstance(bytes_value, str):
+            try:
+                bytes_value = float(bytes_value)
+            except ValueError:
+                return "0 B"
+        
         if bytes_value == 0:
             return "0 B"
-        elif bytes_value >= 1024 * 1024 * 1024:
+        elif bytes_value >= 1024 * 1024 * 1024 * 1024:  # TB
+            return f"{bytes_value / (1024 * 1024 * 1024 * 1024):.2f} TB"
+        elif bytes_value >= 1024 * 1024 * 1024:  # GB
             return f"{bytes_value / (1024 * 1024 * 1024):.2f} GB"
-        elif bytes_value >= 1024 * 1024:
+        elif bytes_value >= 1024 * 1024:  # MB
             return f"{bytes_value / (1024 * 1024):.2f} MB"
-        elif bytes_value >= 1024:
+        elif bytes_value >= 1024:  # KB
             return f"{bytes_value / 1024:.1f} KB"
         else:
             return f"{int(bytes_value)} B"

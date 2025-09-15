@@ -64,5 +64,7 @@ TRANSLATIONS = {
     "api_error": "API请求失败", 
     "json_parse_error": "数据解析失败",
     "empty_list": "未获取到任何下载项目",
-    "relogin_required": "请前往设置页面重新登录"
+    "relogin_required": "请前往设置页面重新登录",
+    "please_enter_username_password": "请输入用户名和密码",
+    "logging_in": "登录中..."
 }

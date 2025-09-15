@@ -6,7 +6,7 @@ from src.read_conf import ReadConf
 
 
 class DownloadThread(QThread):
-    progress_updated = pyqtSignal(int, int, int, str)  # progress%, downloaded_bytes, total_bytes, status
+    progress_updated = pyqtSignal(int, 'PyQt_PyObject', 'PyQt_PyObject', str)  # progress%, downloaded_bytes, total_bytes, status
     download_finished = pyqtSignal(str)  # work_id
     download_error = pyqtSignal(str, str)  # work_id, error_message
     speed_updated = pyqtSignal(str, float)  # work_id, speed_kb_s
@@ -88,18 +88,26 @@ class DownloadThread(QThread):
         # 直接使用API返回的总大小，始终不变
         total_size = self.work_detail.get('total_size', 0)
         
-        # 计算已下载的总大小（包括已存在的文件）
+        # 计算已下载的总大小（包括已存在的文件），支持超大文件
         total_downloaded = 0
         for file_info in self.work_detail['files']:
             filename = self.sanitize_filename(file_info['title'])
             file_path = os.path.join(self.download_dir, filename)
             if os.path.exists(file_path):
+                # 使用os.path.getsize获取实际文件大小，支持大文件
                 downloaded_size = os.path.getsize(file_path)
+                expected_size = file_info.get('size', 0)
+                # 确保expected_size是数字类型，支持超大数值
+                if isinstance(expected_size, str):
+                    try:
+                        expected_size = int(expected_size)
+                    except ValueError:
+                        expected_size = 0
                 # 确保不超过文件实际大小
-                downloaded_size = min(downloaded_size, file_info['size'])
+                downloaded_size = min(downloaded_size, expected_size)
                 total_downloaded += downloaded_size
 
-        print(f"开始下载: 总大小 {total_size} bytes, 已下载 {total_downloaded} bytes")
+        print(f"开始下载: 总大小 {total_size} bytes ({total_size / (1024*1024*1024):.2f} GB), 已下载 {total_downloaded} bytes ({total_downloaded / (1024*1024*1024):.2f} GB)")
         
         # 不发送初始进度更新，避免覆盖界面已显示的正确大小
         
@@ -147,8 +155,8 @@ class DownloadThread(QThread):
                             file_downloaded += chunk_size
                             total_downloaded += chunk_size
 
-                            # 更新进度（使用API返回的总大小）
-                            progress = int((total_downloaded / total_size) * 100) if total_size > 0 else 0
+                            # 更新进度（使用API返回的总大小），支持超大文件
+                            progress = min(int((total_downloaded / total_size) * 100), 100) if total_size > 0 else 0
                             self.progress_updated.emit(progress, total_downloaded, total_size, "下载中...")
 
                             # 计算并发送速度更新
@@ -203,7 +211,7 @@ class DownloadThread(QThread):
 class MultiFileDownloadManager(QThread):
     """管理多个作品的下载"""
     download_started = pyqtSignal(str)  # work_id
-    download_progress = pyqtSignal(str, int, int, int, str)  # work_id, progress%, downloaded, total, status
+    download_progress = pyqtSignal(str, int, 'PyQt_PyObject', 'PyQt_PyObject', str)  # work_id, progress%, downloaded, total, status
     download_completed = pyqtSignal(str)  # work_id
     download_failed = pyqtSignal(str, str)  # work_id, error
     speed_updated = pyqtSignal(str, float)  # work_id, speed
