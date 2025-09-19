@@ -71,5 +71,32 @@ TRANSLATIONS = {
     "empty_list": "未获取到任何下载项目",
     "relogin_required": "请前往设置页面重新登录",
     "please_enter_username_password": "请输入用户名和密码",
-    "logging_in": "登录中..."
+    "logging_in": "登录中...",
+    
+    # 设置页面相关
+    "download_path_settings": "下载路径设置:",
+    "network_settings": "网络设置:",
+    "download_speed_limit": "下载限速:",
+    "user_login": "用户登录:",
+    "download_settings": "下载设置:",
+    "retry_count": "重试次数:",
+    "timeout_time": "超时时间:",
+    "min_speed": "最小速度:",
+    "check_interval": "检查间隔:",
+    "file_type_selection": "文件类型选择:",
+    "mb_per_s": "MB/s",
+    "kb_per_s": "KB/s",
+    "second": "秒",
+    
+    # 状态和消息
+    "error_occurred": "发生错误",
+    "login_result": "登录结果",
+    "login_successful": "登录成功",
+    "login_error": "登录过程中发生错误",
+    "window_size_adjusted": "调整窗口尺寸以适应新增的配置项",
+    "path_config_updated": "下载路径配置已更新为",
+    "validation_failed": "验证失败",
+    "download_stopped": "下载已停止",
+    "stop_operation": "停止操作",
+    "download_complete": "下载完成"
 }

@@ -71,5 +71,32 @@ TRANSLATIONS = {
     "empty_list": "ダウンロード項目が見つかりません",
     "relogin_required": "設定ページで再ログインしてください",
     "please_enter_username_password": "ユーザー名とパスワードを入力してください",
-    "logging_in": "ログイン中..."
+    "logging_in": "ログイン中...",
+    
+    # 設定ページ関連
+    "download_path_settings": "ダウンロードパス設定:",
+    "network_settings": "ネットワーク設定:",
+    "download_speed_limit": "ダウンロード速度制限:",
+    "user_login": "ユーザーログイン:",
+    "download_settings": "ダウンロード設定:",
+    "retry_count": "再試行回数:",
+    "timeout_time": "タイムアウト:",
+    "min_speed": "最小速度:",
+    "check_interval": "チェック間隔:",
+    "file_type_selection": "ファイルタイプ選択:",
+    "mb_per_s": "MB/s",
+    "kb_per_s": "KB/s",
+    "second": "秒",
+    
+    # ステータスとメッセージ
+    "error_occurred": "エラーが発生しました",
+    "login_result": "ログイン結果",
+    "login_successful": "ログイン成功",
+    "login_error": "ログイン中にエラーが発生しました",
+    "window_size_adjusted": "新しい設定項目に合わせてウィンドウサイズを調整",
+    "path_config_updated": "ダウンロードパス設定が更新されました",
+    "validation_failed": "検証に失敗しました",
+    "download_stopped": "ダウンロードが停止されました",
+    "stop_operation": "停止操作",
+    "download_complete": "ダウンロード完了"
 }

@@ -71,5 +71,32 @@ TRANSLATIONS = {
     "empty_list": "No download items found",
     "relogin_required": "Please go to settings page to login again",
     "please_enter_username_password": "Please enter username and password",
-    "logging_in": "Logging in..."
+    "logging_in": "Logging in...",
+    
+    # Settings page related
+    "download_path_settings": "Download Path Settings:",
+    "network_settings": "Network Settings:",
+    "download_speed_limit": "Download Speed Limit:",
+    "user_login": "User Login:",
+    "download_settings": "Download Settings:",
+    "retry_count": "Retry Count:",
+    "timeout_time": "Timeout:",
+    "min_speed": "Min Speed:",
+    "check_interval": "Check Interval:",
+    "file_type_selection": "File Type Selection:",
+    "mb_per_s": "MB/s",
+    "kb_per_s": "KB/s", 
+    "second": "sec",
+    
+    # Status and messages
+    "error_occurred": "Error occurred",
+    "login_result": "Login result",
+    "login_successful": "Login successful",
+    "login_error": "Error occurred during login",
+    "window_size_adjusted": "Window size adjusted for new configuration items",
+    "path_config_updated": "Download path configuration updated to",
+    "validation_failed": "Validation failed",
+    "download_stopped": "Download stopped",
+    "stop_operation": "Stop operation",
+    "download_complete": "Download complete"
 }

@@ -33,7 +33,7 @@ class DownloadThread(QThread):
             if not self.stop_event.is_set():  # 检查是否是正常完成
                 self.download_finished.emit(message)
         except Exception as e:
-            self.download_finished.emit(f"发生错误: {str(e)}")
+            self.download_finished.emit(f"{language_manager.get_text('error_occurred')}: {str(e)}")
 
     def stop(self):
         self.stop_event.set()  # 设置停止标志
@@ -58,20 +58,22 @@ class LoginThread(QThread):
             # 执行登录
             from src.asmr_api.login import login
             result = login()
-            print(f"登录结果: {result}")  # 调试信息
+            print(f"{language_manager.get_text('login_result')}: {result}")  # 调试信息
 
             if result is True:
-                self.login_finished.emit(True, "登录成功")
+                self.login_finished.emit(True, language_manager.get_text('login_successful'))
             else:
                 self.login_finished.emit(False, str(result))
                 
         except Exception as e:
-            self.login_finished.emit(False, f"登录过程中发生错误：{str(e)}")
+            self.login_finished.emit(False, f"{language_manager.get_text('login_error')}：{str(e)}")
 
 
 class SetConfig(QMainWindow):
     # 添加信号，当下载路径更改时发出
     download_path_changed = pyqtSignal()
+    # 添加信号，用于接收语言切换通知
+    language_changed = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -84,13 +86,13 @@ class SetConfig(QMainWindow):
 
         # 创建界面组件
         self.setWindowTitle(language_manager.get_text('app_title'))
-        self.setFixedSize(440, 420)  # 调整窗口尺寸以适应新增的配置项
+        self.setFixedSize(450, 420)  # 稍微增加窗口宽度以适应多语言文本
 
         self.centralwidget = QtWidgets.QWidget(self)
         self.setCentralWidget(self.centralwidget)
 
         # 下载路径设置区域
-        self.download_path_label = QLabel('下载路径设置:', self.centralwidget)
+        self.download_path_label = QLabel(language_manager.get_text('download_path_settings'), self.centralwidget)
         self.download_path_label.setGeometry(QtCore.QRect(10, 10, 300, 20))
         self.download_path_label.setStyleSheet('font-weight: bold; color: #2c3e50;')
 
@@ -101,12 +103,12 @@ class SetConfig(QMainWindow):
         self.down_path.setPlaceholderText(language_manager.get_text('download_path'))
 
         # 网络设置区域
-        self.network_settings_label = QLabel('网络设置:', self.centralwidget)
+        self.network_settings_label = QLabel(language_manager.get_text('network_settings'), self.centralwidget)
         self.network_settings_label.setGeometry(QtCore.QRect(10, 70, 100, 20))
         self.network_settings_label.setStyleSheet('font-weight: bold; color: #2c3e50;')
 
         # 下载限速设置
-        self.speed_limit_desc_label = QLabel('下载限速:', self.centralwidget)
+        self.speed_limit_desc_label = QLabel(language_manager.get_text('download_speed_limit'), self.centralwidget)
         self.speed_limit_desc_label.setGeometry(QtCore.QRect(10, 90, 60, 30))
         self.speed_limit_desc_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
 
@@ -116,7 +118,7 @@ class SetConfig(QMainWindow):
         self.speed_limit.setPlaceholderText(language_manager.get_text('speed'))
         self.speed_limit.editingFinished.connect(self.save_speed_limit)
 
-        self.speed_limit_label = QLabel('MB/s', self.centralwidget)
+        self.speed_limit_label = QLabel(language_manager.get_text('mb_per_s'), self.centralwidget)
         self.speed_limit_label.setGeometry(QtCore.QRect(140, 90, 40, 30))
         self.speed_limit_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
 
@@ -160,7 +162,7 @@ class SetConfig(QMainWindow):
         self.proxy_port.editingFinished.connect(self.save_proxy_port)
 
         # 用户登录区域
-        self.login_label = QLabel('用户登录:', self.centralwidget)
+        self.login_label = QLabel(language_manager.get_text('user_login'), self.centralwidget)
         self.login_label.setGeometry(QtCore.QRect(10, 165, 100, 20))
         self.login_label.setStyleSheet('font-weight: bold; color: #2c3e50;')
 
@@ -186,40 +188,40 @@ class SetConfig(QMainWindow):
         self.user_conf_save_button.clicked.connect(self.save_user)
 
         # 下载设置区域
-        self.download_settings_label = QLabel('下载设置:', self.centralwidget)
+        self.download_settings_label = QLabel(language_manager.get_text('download_settings'), self.centralwidget)
         self.download_settings_label.setGeometry(QtCore.QRect(10, 220, 100, 20))
         self.download_settings_label.setStyleSheet('font-weight: bold; color: #2c3e50;')
 
         # 第一行：最大重试次数和超时时间
-        self.max_retries_desc_label = QLabel('重试次数:', self.centralwidget)
-        self.max_retries_desc_label.setGeometry(QtCore.QRect(10, 240, 60, 30))
+        self.max_retries_desc_label = QLabel(language_manager.get_text('retry_count'), self.centralwidget)
+        self.max_retries_desc_label.setGeometry(QtCore.QRect(10, 240, 75, 30))
         self.max_retries_desc_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         self.max_retries = QLineEdit(self.centralwidget)
-        self.max_retries.setGeometry(QtCore.QRect(75, 240, 50, 30))
+        self.max_retries.setGeometry(QtCore.QRect(90, 240, 50, 30))
         self.max_retries.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.max_retries.setPlaceholderText(language_manager.get_text('max_retries'))
         self.max_retries.editingFinished.connect(self.save_max_retries)
         self.max_retries_label = QLabel(language_manager.get_text('times'), self.centralwidget)
-        self.max_retries_label.setGeometry(QtCore.QRect(130, 240, 30, 30))
+        self.max_retries_label.setGeometry(QtCore.QRect(145, 240, 35, 30))
         self.max_retries_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         # 下载超时时间
-        self.timeout_desc_label = QLabel('超时时间:', self.centralwidget)
-        self.timeout_desc_label.setGeometry(QtCore.QRect(170, 240, 60, 30))
+        self.timeout_desc_label = QLabel(language_manager.get_text('timeout_time'), self.centralwidget)
+        self.timeout_desc_label.setGeometry(QtCore.QRect(185, 240, 65, 30))
         self.timeout_desc_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         self.timeout = QLineEdit(self.centralwidget)
-        self.timeout.setGeometry(QtCore.QRect(235, 240, 50, 30))
+        self.timeout.setGeometry(QtCore.QRect(255, 240, 50, 30))
         self.timeout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.timeout.setPlaceholderText(language_manager.get_text('timeout'))
         self.timeout.editingFinished.connect(self.save_timeout)
         self.time_out_label = QLabel(language_manager.get_text('seconds'), self.centralwidget)
-        self.time_out_label.setGeometry(QtCore.QRect(290, 240, 30, 30))
+        self.time_out_label.setGeometry(QtCore.QRect(310, 240, 35, 30))
         self.time_out_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         # 第二行：速度监控设置
-        self.min_speed_desc_label = QLabel('最小速度:', self.centralwidget)
+        self.min_speed_desc_label = QLabel(language_manager.get_text('min_speed'), self.centralwidget)
         self.min_speed_desc_label.setGeometry(QtCore.QRect(10, 270, 60, 30))
         self.min_speed_desc_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         
@@ -229,22 +231,22 @@ class SetConfig(QMainWindow):
         self.min_speed.setPlaceholderText('256')
         self.min_speed.editingFinished.connect(self.save_min_speed)
         
-        self.min_speed_label = QLabel('KB/s', self.centralwidget)
+        self.min_speed_label = QLabel(language_manager.get_text('kb_per_s'), self.centralwidget)
         self.min_speed_label.setGeometry(QtCore.QRect(130, 270, 35, 30))
         self.min_speed_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
         
-        self.min_speed_check_desc_label = QLabel('检查间隔:', self.centralwidget)
-        self.min_speed_check_desc_label.setGeometry(QtCore.QRect(170, 270, 60, 30))
+        self.min_speed_check_desc_label = QLabel(language_manager.get_text('check_interval'), self.centralwidget)
+        self.min_speed_check_desc_label.setGeometry(QtCore.QRect(170, 270, 80, 30))
         self.min_speed_check_desc_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         
         self.min_speed_check = QLineEdit(self.centralwidget)
-        self.min_speed_check.setGeometry(QtCore.QRect(235, 270, 50, 30))
+        self.min_speed_check.setGeometry(QtCore.QRect(255, 270, 50, 30))
         self.min_speed_check.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.min_speed_check.setPlaceholderText('30')
         self.min_speed_check.editingFinished.connect(self.save_min_speed_check)
         
-        self.min_speed_check_label = QLabel('秒', self.centralwidget)
-        self.min_speed_check_label.setGeometry(QtCore.QRect(290, 270, 20, 30))
+        self.min_speed_check_label = QLabel(language_manager.get_text('second'), self.centralwidget)
+        self.min_speed_check_label.setGeometry(QtCore.QRect(310, 270, 30, 30))
         self.min_speed_check_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
 
         # 第三行：文件命名方式
@@ -264,7 +266,7 @@ class SetConfig(QMainWindow):
 
 
         # 文件类型选择区域
-        self.file_types_label = QLabel('文件类型选择:', self.centralwidget)
+        self.file_types_label = QLabel(language_manager.get_text('file_type_selection'), self.centralwidget)
         self.file_types_label.setGeometry(QtCore.QRect(10, 335, 100, 20))
         self.file_types_label.setStyleSheet('font-weight: bold; color: #2c3e50;')
 
@@ -336,6 +338,16 @@ class SetConfig(QMainWindow):
 
 
         self.set_data()
+
+        # 连接语言切换信号
+        self.language_changed.connect(self.on_language_changed)
+        
+        # 初始化语言显示
+        self.update_language()
+
+    def on_language_changed(self, language_code):
+        """响应语言切换信号"""
+        self.update_language()
 
     def save_open_proxy(self):
         self.conf.write_open_proxy('True' if self.open_proxy.isChecked() else 'False')
@@ -531,7 +543,7 @@ class SetConfig(QMainWindow):
             self.conf.write_download_conf(speed_limit, download_path)
             # 发出下载路径更改信号
             self.download_path_changed.emit()
-            print(f"下载路径配置已更新为: {download_path}")
+            print(f"{language_manager.get_text('path_config_updated')}: {download_path}")
 
     def save_user(self):
         user_name = self.user_name.text()
@@ -539,7 +551,7 @@ class SetConfig(QMainWindow):
         
         # 检查用户名和密码是否为空
         if not user_name or not password:
-            self.show_message_box(language_manager.get_text('please_enter_username_password'), "验证失败")
+            self.show_message_box(language_manager.get_text('please_enter_username_password'), language_manager.get_text('validation_failed'))
             return
         
         # 禁用登录按钮，防止重复点击
@@ -635,10 +647,10 @@ class SetConfig(QMainWindow):
             self.download_thread.wait()
             self.down_stop_button.setEnabled(False)
             self.down_start_button.setEnabled(True)
-            self.show_message_box("下载已停止", "停止操作")
+            self.show_message_box(language_manager.get_text('download_stopped'), language_manager.get_text('stop_operation'))
 
     def on_download_finished(self, message):
-        self.show_message_box(message, "下载完成")
+        self.show_message_box(message, language_manager.get_text('download_complete'))
         self.down_stop_button.setEnabled(False)
 
     def open_download_page(self):
@@ -648,3 +660,58 @@ class SetConfig(QMainWindow):
         self.download_page.show()
         self.download_page.raise_()
         self.download_page.activateWindow()
+
+    def update_language(self):
+        """更新界面语言显示"""
+        # 更新窗口标题
+        self.setWindowTitle(language_manager.get_text('app_title'))
+        
+        # 更新所有标签文本
+        self.download_path_label.setText(language_manager.get_text('download_path_settings'))
+        self.network_settings_label.setText(language_manager.get_text('network_settings'))
+        self.speed_limit_desc_label.setText(language_manager.get_text('download_speed_limit'))
+        self.speed_limit_label.setText(language_manager.get_text('mb_per_s'))
+        self.download_source_label.setText(language_manager.get_text('download_source'))
+        self.open_proxy.setText(language_manager.get_text('use_proxy'))
+        self.login_label.setText(language_manager.get_text('user_login'))
+        self.download_settings_label.setText(language_manager.get_text('download_settings'))
+        self.max_retries_desc_label.setText(language_manager.get_text('retry_count'))
+        self.max_retries_label.setText(language_manager.get_text('times'))
+        self.timeout_desc_label.setText(language_manager.get_text('timeout_time'))
+        self.time_out_label.setText(language_manager.get_text('seconds'))
+        self.min_speed_desc_label.setText(language_manager.get_text('min_speed'))
+        self.min_speed_label.setText(language_manager.get_text('kb_per_s'))
+        self.min_speed_check_desc_label.setText(language_manager.get_text('check_interval'))
+        self.min_speed_check_label.setText(language_manager.get_text('second'))
+        self.label.setText(language_manager.get_text('folder_naming'))
+        self.file_types_label.setText(language_manager.get_text('file_type_selection'))
+        
+        # 更新按钮文本
+        self.path_conf_save_button.setText(language_manager.get_text('select'))
+        self.user_conf_save_button.setText(language_manager.get_text('login'))
+        
+        # 更新输入框占位符文本
+        self.down_path.setPlaceholderText(language_manager.get_text('download_path'))
+        self.speed_limit.setPlaceholderText(language_manager.get_text('speed'))
+        self.proxy_address.setPlaceholderText(language_manager.get_text('proxy_address'))
+        self.proxy_port.setPlaceholderText(language_manager.get_text('port'))
+        self.user_name.setPlaceholderText(language_manager.get_text('user_name'))
+        self.password.setPlaceholderText(language_manager.get_text('password'))
+        self.max_retries.setPlaceholderText(language_manager.get_text('max_retries'))
+        self.timeout.setPlaceholderText(language_manager.get_text('timeout'))
+        
+        # 更新下拉框选项
+        current_folder_index = self.folder_name_type_combo_box.currentIndex()
+        self.folder_name_type_combo_box.clear()
+        self.folder_name_type_combo_box.addItem(language_manager.get_text('rj_naming'))
+        self.folder_name_type_combo_box.addItem(language_manager.get_text('title_naming'))
+        self.folder_name_type_combo_box.addItem(language_manager.get_text('rj_space_title_naming'))
+        self.folder_name_type_combo_box.addItem(language_manager.get_text('rj_underscore_title_naming'))
+        self.folder_name_type_combo_box.setCurrentIndex(current_folder_index)
+
+    def show_message_box(self, message, title):
+        """显示消息框"""
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.exec()

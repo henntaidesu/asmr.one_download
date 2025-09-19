@@ -1198,6 +1198,10 @@ class DownloadPage(QWidget):
         """切换语言"""
         language_manager.set_language(language_code)
         self.update_ui_text()
+        
+        # 如果设置页面已经打开，通知它切换语言
+        if hasattr(self, 'settings_page') and self.settings_page and self.settings_page.isVisible():
+            self.settings_page.language_changed.emit(language_code)
 
     def update_ui_text(self):
         """更新界面文本"""
@@ -1232,6 +1236,7 @@ class DownloadPage(QWidget):
             self.settings_page = SetConfig()
             # 连接下载路径更改信号
             self.settings_page.download_path_changed.connect(self.update_download_path)
+            # 初始语言同步已在SetConfig的__init__中完成
         self.settings_page.show()
         self.settings_page.raise_()
         self.settings_page.activateWindow()
