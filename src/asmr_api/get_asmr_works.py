@@ -222,30 +222,30 @@ def get_asmr_downlist_api(stop_event):
 
             # 根据配置调整文件夹命名方式
             if folder_flag == 'rj_naming':
-                if len(str(keyword)) > 6:
-                    work_title = f'RJ{keyword:08d}'
-                else:
+                if len(str(keyword)) == 6:
                     work_title = f'RJ{keyword:06d}'
+                else:
+                    work_title = f'RJ{keyword:08d}'
 
             elif folder_flag == 'rj_space_title_naming':
-                if len(str(keyword)) > 6:
-                    work_title = f'RJ{keyword:08d} {work_title}'
-                else:
+                if len(str(keyword)) == 6:
                     work_title = f'RJ{keyword:06d} {work_title}'
+                else:
+                    work_title = f'RJ{keyword:08d} {work_title}'
 
             elif folder_flag == 'rj_underscore_title_naming':
-                if len(str(keyword)) > 6:
-                    work_title = f'RJ{keyword:08d}_{work_title}'
-                else:
+                if len(str(keyword)) == 6:
                     work_title = f'RJ{keyword:06d}_{work_title}'
+                else:
+                    work_title = f'RJ{keyword:08d}_{work_title}'
 
             try:
                 # 检查是否开启数据库
                 if check_DB:
-                    if len(str(keyword)) > 6:
-                        rj_number = f'RJ{keyword:08d}'
-                    else:
+                    if len(str(keyword)) == 6:
                         rj_number = f'RJ{keyword:06d}'
+                    else:
+                        rj_number = f'RJ{keyword:08d}'
 
                     sql = f"SELECT work_state FROM `works` WHERE work_id = '{rj_number}'"
                     DB_flag = int(MySQLDB().select(sql)[1][0][0])

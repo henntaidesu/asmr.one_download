@@ -125,7 +125,9 @@ class DownloadItemWidget(QWidget):
         info_layout.addWidget(self.title_label, 1)
 
         # RJ号
-        self.rj_label = QLabel(f"RJ{self.work_info['id']:06d}")
+        work_id = self.work_info['id']
+        rj_text = f"RJ{work_id:06d}" if len(str(work_id)) == 6 else f"RJ{work_id:08d}"
+        self.rj_label = QLabel(rj_text)
         self.rj_label.setStyleSheet("color: #666; font-size: 12px;")
         info_layout.addWidget(self.rj_label)
 
@@ -657,13 +659,13 @@ class DownloadItemWidget(QWidget):
         work_id = self.work_info['id']
         
         if folder_for_name == 'rj_naming':
-            folder_name = f'RJ{work_id:08d}' if len(str(work_id)) > 6 else f'RJ{work_id:06d}'
+            folder_name = f'RJ{work_id:06d}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}'
         elif folder_for_name == 'title_naming':
             folder_name = work_title
         elif folder_for_name == 'rj_space_title_naming':
-            folder_name = f'RJ{work_id:08d} {work_title}' if len(str(work_id)) > 6 else f'RJ{work_id:06d} {work_title}'
+            folder_name = f'RJ{work_id:06d} {work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d} {work_title}'
         elif folder_for_name == 'rj_underscore_title_naming':
-            folder_name = f'RJ{work_id:08d}_{work_title}' if len(str(work_id)) > 6 else f'RJ{work_id:06d}_{work_title}'
+            folder_name = f'RJ{work_id:06d}_{work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}_{work_title}'
         else:
             folder_name = work_title
             

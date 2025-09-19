@@ -339,13 +339,13 @@ class MultiFileDownloadManager(QThread):
             work_id = int(work_id)
 
         if folder_for_name == 'rj_naming':
-            folder_name = f'RJ{work_id:08d}' if len(str(work_id)) > 6 else f'RJ{work_id:06d}'
+            folder_name = f'RJ{work_id:06d}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}'
         elif folder_for_name == 'title_naming':
             folder_name = work_title
         elif folder_for_name == 'rj_space_title_naming':
-            folder_name = f'RJ{work_id:08d} {work_title}' if len(str(work_id)) > 6 else f'RJ{work_id:06d} {work_title}'
+            folder_name = f'RJ{work_id:06d} {work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d} {work_title}'
         elif folder_for_name == 'rj_underscore_title_naming':
-            folder_name = f'RJ{work_id:08d}_{work_title}' if len(str(work_id)) > 6 else f'RJ{work_id:06d}_{work_title}'
+            folder_name = f'RJ{work_id:06d}_{work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}_{work_title}'
         else:
             folder_name = work_title
 
