@@ -88,9 +88,19 @@ class DownloadThread(QThread):
         # 直接使用API返回的总大小，始终不变
         total_size = self.work_detail.get('total_size', 0)
         
+        # 读取文件类型配置，用于计算已下载文件大小
+        conf = ReadConf()
+        selected_formats = conf.read_downfile_type()
+
         # 计算已下载的总大小（包括已存在的文件），支持超大文件
         total_downloaded = 0
         for file_info in self.work_detail['files']:
+            # 按照旧方法的逻辑进行文件类型筛选
+            file_title = file_info['title']
+            file_type = file_title[file_title.rfind('.') + 1:].upper()
+            if not selected_formats.get(file_type, False):
+                continue  # 跳过不需要的文件类型
+
             filename = self.sanitize_filename(file_info['title'])
             # 保持API返回的目录结构，但根目录使用配置的命名方式
             folder_path = file_info.get('folder_path', '')
@@ -123,10 +133,17 @@ class DownloadThread(QThread):
         print(f"开始下载: 总大小 {total_size} bytes ({total_size / (1024*1024*1024):.2f} GB), 已下载 {total_downloaded} bytes ({total_downloaded / (1024*1024*1024):.2f} GB)")
         
         # 不发送初始进度更新，避免覆盖界面已显示的正确大小
-        
+
         for file_info in self.work_detail['files']:
             if self.is_cancelled:
                 return
+
+            # 按照旧方法的逻辑进行文件类型筛选
+            file_title = file_info['title']
+            file_type = file_title[file_title.rfind('.') + 1:].upper()
+            if not selected_formats.get(file_type, False):
+                print(f"跳过文件: {file_title}")
+                continue
 
             file_size = file_info['size']
             download_url = file_info['download_url']
