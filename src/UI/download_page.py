@@ -99,22 +99,30 @@ class DownloadItemWidget(QWidget):
         layout.addLayout(bottom_layout)
 
         # 文件目录展示区域（初始隐藏）
-        self.file_tree_widget = QWidget()
-        self.file_tree_widget.setVisible(False)
-        self.file_tree_widget.setStyleSheet("""
-            QWidget {
-                background-color: #f8f9fa;
-                border: 1px solid #e9ecef;
-                border-radius: 4px;
-                margin: 5px 0px;
+        self.file_tree_scroll = QScrollArea()
+        self.file_tree_scroll.setVisible(False)
+        self.file_tree_scroll.setMaximumHeight(100)
+        self.file_tree_scroll.setWidgetResizable(True)
+        self.file_tree_scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.file_tree_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.file_tree_scroll.setStyleSheet("""
+            QScrollArea {
+                background-color: #ffffff;
+                border: 1px solid #ddd;
+                border-radius: 2px;
+                margin: 2px 0px;
             }
         """)
 
+        self.file_tree_widget = QWidget()
         self.file_tree_layout = QVBoxLayout()
-        self.file_tree_layout.setContentsMargins(10, 10, 10, 10)
+        self.file_tree_layout.setContentsMargins(5, 5, 5, 5)
+        self.file_tree_layout.setSpacing(1)
         self.file_tree_widget.setLayout(self.file_tree_layout)
 
-        layout.addWidget(self.file_tree_widget)
+        self.file_tree_scroll.setWidget(self.file_tree_widget)
+
+        layout.addWidget(self.file_tree_scroll)
 
         # 分割线
         line = QFrame()
@@ -150,9 +158,9 @@ class DownloadItemWidget(QWidget):
 
         if self.is_expanded:
             self.build_file_tree()
-            self.file_tree_widget.setVisible(True)
+            self.file_tree_scroll.setVisible(True)
         else:
-            self.file_tree_widget.setVisible(False)
+            self.file_tree_scroll.setVisible(False)
 
     def build_file_tree(self):
         """构建文件目录树"""
@@ -209,24 +217,36 @@ class DownloadItemWidget(QWidget):
         # 显示文件树
         self._display_tree(file_tree, 0)
 
-    def _display_tree(self, tree_dict, indent_level):
-        """递归显示文件树"""
-        for name, item in sorted(tree_dict.items()):
-            # 创建缩进
-            indent_text = "  " * indent_level
+    def _display_tree(self, tree_dict, indent_level=0, prefix="", is_last=True):
+        """递归显示文件树，使用tree命令风格"""
+        items = list(sorted(tree_dict.items()))
+
+        for i, (name, item) in enumerate(items):
+            is_current_last = (i == len(items) - 1)
+
+            # 构建树形前缀
+            if indent_level == 0:
+                tree_prefix = ""
+            else:
+                tree_prefix = prefix + ("└── " if is_current_last else "├── ")
 
             if item['type'] == 'folder':
                 # 文件夹
-                folder_label = QLabel(f"{indent_text}📁 {name}/")
-                folder_label.setStyleSheet("color: #2196F3; font-weight: bold; font-size: 12px;")
+                folder_text = f"{tree_prefix}{name}/"
+                folder_label = QLabel(folder_text)
+                folder_label.setStyleSheet("color: #666; font-weight: bold; font-size: 10px; font-family: 'Courier New', monospace;")
                 self.file_tree_layout.addWidget(folder_label)
 
                 # 递归显示子项
-                self._display_tree(item['children'], indent_level + 1)
+                if indent_level == 0:
+                    next_prefix = ""
+                else:
+                    next_prefix = prefix + ("    " if is_current_last else "│   ")
+                self._display_tree(item['children'], indent_level + 1, next_prefix, is_current_last)
             else:
                 # 文件
                 file_size = self.format_bytes(item.get('size', 0))
-                file_text = f"{indent_text}📄 {name} ({file_size})"
+                file_text = f"{tree_prefix}{name} ({file_size})"
 
                 file_label = QLabel(file_text)
 
@@ -234,12 +254,13 @@ class DownloadItemWidget(QWidget):
                     # 跳过的文件使用删除线样式
                     file_label.setStyleSheet("""
                         color: #999;
-                        font-size: 11px;
+                        font-size: 10px;
+                        font-family: 'Courier New', monospace;
                         text-decoration: line-through;
                     """)
                 else:
                     # 正常下载的文件
-                    file_label.setStyleSheet("color: #333; font-size: 11px;")
+                    file_label.setStyleSheet("color: #333; font-size: 10px; font-family: 'Courier New', monospace;")
 
                 self.file_tree_layout.addWidget(file_label)
 
