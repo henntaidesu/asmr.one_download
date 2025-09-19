@@ -7,6 +7,8 @@ from PyQt6.QtWidgets import (
     QProgressBar, QListWidget, QListWidgetItem, QMessageBox,
     QScrollArea, QFrame, QComboBox
 )
+from PyQt6.QtGui import QPainter, QPen
+from PyQt6.QtCore import pyqtSignal
 from PyQt6 import QtCore, QtWidgets
 from src.asmr_api.get_down_list import get_down_list
 from src.asmr_api.get_work_detail import get_work_detail
@@ -14,6 +16,34 @@ from src.asmr_api.works_review import review
 from src.download.download_thread import MultiFileDownloadManager
 from src.read_conf import ReadConf
 from src.language.language_manager import language_manager
+
+
+class TriangleButton(QLabel):
+    """可点击的三角形折叠按钮"""
+    clicked = pyqtSignal()
+
+    def __init__(self, collapsed=True):
+        super().__init__()
+        self.collapsed = collapsed
+        self.setFixedSize(12, 12)
+        self.update_icon()
+
+    def update_icon(self):
+        """更新三角形图标"""
+        if self.collapsed:
+            self.setText("▶")  # 右指三角形
+        else:
+            self.setText("▼")  # 下指三角形
+        self.setStyleSheet("color: #000; font-size: 10px; font-family: monospace;")
+
+    def mousePressEvent(self, event):
+        """处理点击事件"""
+        from PyQt6.QtCore import Qt
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.collapsed = not self.collapsed
+            self.update_icon()
+            self.clicked.emit()
+        super().mousePressEvent(event)
 
 
 class WorkDetailThread(QThread):
@@ -180,6 +210,7 @@ class DownloadItemWidget(QWidget):
 
         # 添加点击事件处理
         self.is_expanded = False
+        self.collapsed_folders = set()  # 存储被折叠的文件夹路径
         self.installEventFilter(self)
 
         self.setLayout(layout)
@@ -289,15 +320,31 @@ class DownloadItemWidget(QWidget):
                     'skipped': is_skipped
                 }
 
+        # 第一次构建时，将所有跳过的文件夹设为折叠状态
+        if not hasattr(self, '_initial_collapsed_set'):
+            self._set_initial_collapsed_folders(file_tree, "")
+            self._initial_collapsed_set = True
+
         # 显示文件树
         self._display_tree(file_tree, 0)
 
-    def _display_tree(self, tree_dict, indent_level=0, prefix="", is_last=True):
+    def _set_initial_collapsed_folders(self, tree_dict, folder_path):
+        """初始化时将所有跳过的文件夹设为折叠状态"""
+        for name, item in tree_dict.items():
+            if item['type'] == 'folder':
+                current_path = f"{folder_path}/{name}" if folder_path else name
+                if self._check_all_files_skipped(item['children']):
+                    self.collapsed_folders.add(current_path)
+                # 递归处理子文件夹
+                self._set_initial_collapsed_folders(item['children'], current_path)
+
+    def _display_tree(self, tree_dict, indent_level=0, prefix="", is_last=True, folder_path=""):
         """递归显示文件树，使用tree命令风格"""
         items = list(sorted(tree_dict.items()))
 
         for i, (name, item) in enumerate(items):
             is_current_last = (i == len(items) - 1)
+            current_path = f"{folder_path}/{name}" if folder_path else name
 
             # 构建树形前缀
             if indent_level == 0:
@@ -306,18 +353,64 @@ class DownloadItemWidget(QWidget):
                 tree_prefix = prefix + ("└── " if is_current_last else "├── ")
 
             if item['type'] == 'folder':
-                # 文件夹
-                folder_text = f"{tree_prefix}{name}/"
-                folder_label = QLabel(folder_text)
-                folder_label.setStyleSheet("color: #666; font-weight: bold; font-size: 10px; font-family: 'Courier New', monospace;")
-                self.file_tree_layout.addWidget(folder_label)
+                # 检查文件夹内是否所有文件都被跳过
+                all_files_skipped = self._check_all_files_skipped(item['children'])
 
-                # 递归显示子项
-                if indent_level == 0:
-                    next_prefix = ""
+                if all_files_skipped:
+                    # 为跳过的文件夹创建带三角形的布局
+                    folder_widget = QWidget()
+                    folder_layout = QHBoxLayout()
+                    folder_layout.setContentsMargins(0, 0, 0, 0)
+                    folder_layout.setSpacing(2)
+
+                    # 添加前缀空格
+                    if tree_prefix:
+                        prefix_label = QLabel(tree_prefix)
+                        prefix_label.setStyleSheet("color: #000; font-size: 10px; font-family: 'Courier New', monospace;")
+                        folder_layout.addWidget(prefix_label)
+
+                    # 添加三角形按钮
+                    is_collapsed = current_path in self.collapsed_folders
+                    triangle = TriangleButton(collapsed=is_collapsed)
+                    triangle.clicked.connect(lambda path=current_path: self._toggle_folder(path))
+                    folder_layout.addWidget(triangle)
+
+                    # 添加文件夹名称
+                    folder_text = f"{name}/"
+                    folder_label = QLabel(folder_text)
+                    folder_label.setStyleSheet("""
+                        color: #000;
+                        font-weight: bold;
+                        font-size: 10px;
+                        font-family: 'Courier New', monospace;
+                        text-decoration: line-through;
+                    """)
+                    folder_layout.addWidget(folder_label)
+                    folder_layout.addStretch()
+
+                    folder_widget.setLayout(folder_layout)
+                    self.file_tree_layout.addWidget(folder_widget)
+
+                    # 如果文件夹未被折叠，显示子项
+                    if current_path not in self.collapsed_folders:
+                        if indent_level == 0:
+                            next_prefix = ""
+                        else:
+                            next_prefix = prefix + ("    " if is_current_last else "│   ")
+                        self._display_tree(item['children'], indent_level + 1, next_prefix, is_current_last, current_path)
                 else:
-                    next_prefix = prefix + ("    " if is_current_last else "│   ")
-                self._display_tree(item['children'], indent_level + 1, next_prefix, is_current_last)
+                    # 正常文件夹（有文件需要下载）
+                    folder_text = f"{tree_prefix}{name}/"
+                    folder_label = QLabel(folder_text)
+                    folder_label.setStyleSheet("color: #666; font-weight: bold; font-size: 10px; font-family: 'Courier New', monospace;")
+                    self.file_tree_layout.addWidget(folder_label)
+
+                    # 递归显示子项
+                    if indent_level == 0:
+                        next_prefix = ""
+                    else:
+                        next_prefix = prefix + ("    " if is_current_last else "│   ")
+                    self._display_tree(item['children'], indent_level + 1, next_prefix, is_current_last, current_path)
             else:
                 # 文件
                 file_size = self.format_bytes(item.get('size', 0))
@@ -326,18 +419,39 @@ class DownloadItemWidget(QWidget):
                 file_label = QLabel(file_text)
 
                 if item.get('skipped', False):
-                    # 跳过的文件使用浅色和删除线样式
+                    # 不下载的文件使用黑色和删除线样式
                     file_label.setStyleSheet("""
-                        color: #bbb;
+                        color: #000;
                         font-size: 10px;
                         font-family: 'Courier New', monospace;
                         text-decoration: line-through;
                     """)
                 else:
-                    # 需要下载的文件使用深色
-                    file_label.setStyleSheet("color: #000; font-size: 10px; font-family: 'Courier New', monospace;")
+                    # 下载的文件使用灰色
+                    file_label.setStyleSheet("color: #666; font-size: 10px; font-family: 'Courier New', monospace;")
 
                 self.file_tree_layout.addWidget(file_label)
+
+    def _check_all_files_skipped(self, children_dict):
+        """递归检查文件夹内所有文件是否都被跳过"""
+        for name, item in children_dict.items():
+            if item['type'] == 'file':
+                if not item.get('skipped', False):
+                    return False  # 发现有文件不被跳过
+            elif item['type'] == 'folder':
+                if not self._check_all_files_skipped(item['children']):
+                    return False  # 子文件夹内有文件不被跳过
+        return True  # 所有文件都被跳过
+
+    def _toggle_folder(self, folder_path):
+        """切换文件夹的折叠状态"""
+        if folder_path in self.collapsed_folders:
+            self.collapsed_folders.remove(folder_path)
+        else:
+            self.collapsed_folders.add(folder_path)
+
+        # 重新构建文件树
+        self.build_file_tree()
 
     def load_work_detail(self):
         """加载作品详细信息"""
