@@ -576,7 +576,11 @@ class DownloadPage(QWidget):
         msg_box.setText(message)
         msg_box.setDetailedText(detail)
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg_box.exec()
+        result = msg_box.exec()
+
+        # 如果是TOKEN_EXPIRED错误，点击OK后跳转到设置页面
+        if error_msg == "TOKEN_EXPIRED" and result == QMessageBox.StandardButton.Ok:
+            self.open_settings()
 
     def add_download_item(self, work_info):
         item_widget = DownloadItemWidget(work_info)
