@@ -20,11 +20,12 @@ from src.language.language_manager import language_manager
 
 class TriangleButton(QLabel):
     """可点击的三角形折叠按钮"""
-    clicked = pyqtSignal()
+    clicked = pyqtSignal(str)  # 传递folder_path参数
 
-    def __init__(self, collapsed=True):
+    def __init__(self, collapsed=True, folder_path=""):
         super().__init__()
         self.collapsed = collapsed
+        self.folder_path = folder_path
         self.setFixedSize(12, 12)
         self.update_icon()
 
@@ -38,12 +39,15 @@ class TriangleButton(QLabel):
 
     def mousePressEvent(self, event):
         """处理点击事件"""
-        from PyQt6.QtCore import Qt
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.collapsed = not self.collapsed
-            self.update_icon()
-            self.clicked.emit()
-        super().mousePressEvent(event)
+        try:
+            from PyQt6.QtCore import Qt
+            if event.button() == Qt.MouseButton.LeftButton:
+                self.collapsed = not self.collapsed
+                self.update_icon()
+                self.clicked.emit(self.folder_path)
+        except RuntimeError:
+            # 忽略已删除对象的错误
+            pass
 
 
 class WorkDetailThread(QThread):
@@ -371,8 +375,8 @@ class DownloadItemWidget(QWidget):
 
                     # 添加三角形按钮
                     is_collapsed = current_path in self.collapsed_folders
-                    triangle = TriangleButton(collapsed=is_collapsed)
-                    triangle.clicked.connect(lambda path=current_path: self._toggle_folder(path))
+                    triangle = TriangleButton(collapsed=is_collapsed, folder_path=current_path)
+                    triangle.clicked.connect(self._toggle_folder)
                     folder_layout.addWidget(triangle)
 
                     # 添加文件夹名称
