@@ -6,7 +6,7 @@ import sys
 import ctypes
 
 
-# pyinstaller --noconsole --onefile main.py
+# pyinstaller --noconsole --onefile asmr_downloader.py
 
 
 def create_emoji_icon(emoji, size=64):
