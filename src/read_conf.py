@@ -119,6 +119,18 @@ class ReadConf:
         with open(config_path, 'w', encoding='utf-8') as configfile:
             self.config.write(configfile)
 
+    def write_min_speed(self, min_speed):
+        self.config.set('down_conf', 'min_speed', str(min_speed))
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
+            self.config.write(configfile)
+
+    def write_min_speed_check(self, min_speed_check):
+        self.config.set('down_conf', 'min_speed_check', str(min_speed_check))
+        config_path = self.get_config_path()
+        with open(config_path, 'w', encoding='utf-8') as configfile:
+            self.config.write(configfile)
+
 
     def write_download_conf_(self, download_path):
         self.config.set('down_conf', 'download_path', download_path)

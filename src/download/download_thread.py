@@ -5,6 +5,11 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from src.read_conf import ReadConf
 
 
+class SpeedTooSlowException(Exception):
+    """下载速度过慢异常"""
+    pass
+
+
 class DownloadThread(QThread):
     progress_updated = pyqtSignal(int, 'PyQt_PyObject', 'PyQt_PyObject', str)  # progress%, downloaded_bytes, total_bytes, status
     download_finished = pyqtSignal(str)  # work_id
@@ -35,6 +40,20 @@ class DownloadThread(QThread):
         self.bucket_size = self.speed_limit_bps  # 桶大小等于每秒允许的字节数
         self.tokens = self.bucket_size  # 初始令牌数
         self.last_refill_time = time.time()
+
+        # 速度监控配置
+        self.min_speed_kbps = download_conf['min_speed']  # KB/s，低于此速度需要重新下载
+        self.min_speed_check_interval = download_conf['min_speed_check']  # 秒，速度检查间隔
+        self.request_timeout = download_conf['timeout']  # 秒，请求超时时间
+        
+        # 速度监控状态
+        self.speed_check_start_time = time.time()
+        self.last_speed_check_time = time.time()
+        self.current_speed_kbps = 0.0
+        self.speed_check_enabled = True
+        
+        # 打印速度监控配置（用于调试）
+        print(f"速度监控配置 - 最小速度: {self.min_speed_kbps} KB/s, 检查间隔: {self.min_speed_check_interval}秒, 超时: {self.request_timeout}秒")
 
     def refill_tokens(self):
         """补充令牌桶中的令牌"""
@@ -193,55 +212,20 @@ class DownloadThread(QThread):
             else:
                 file_downloaded = 0
 
-            try:
-                headers = {}
-                if file_downloaded > 0:
-                    headers['Range'] = f'bytes={file_downloaded}-'
-
-                response = requests.get(download_url, headers=headers, stream=True, proxies=proxy_url)
-                response.raise_for_status()
-                
-                with open(file_path, 'ab' if file_downloaded > 0 else 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if self.is_cancelled:
-                            return
-
-                        while self.is_paused and not self.is_cancelled:
-                            time.sleep(0.1)
-
-                        if chunk:
-                            chunk_size = len(chunk)
-
-                            # 使用令牌桶算法进行速度限制
-                            self.consume_tokens(chunk_size)
-
-                            f.write(chunk)
-                            file_downloaded += chunk_size
-                            total_downloaded += chunk_size
-
-                            # 更新进度（使用实际下载的总大小），支持超大文件
-                            progress = min(int((total_downloaded / actual_total_size) * 100), 100) if actual_total_size > 0 else 0
-                            self.progress_updated.emit(progress, total_downloaded, actual_total_size, "下载中...")
-
-                            # 计算并发送速度更新
-                            current_time = time.time()
-                            time_diff = current_time - self.last_update_time
-
-                            if time_diff >= 0.5:  # 每0.5秒更新一次速度
-                                bytes_diff = total_downloaded - self.last_downloaded
-                                speed_bps = bytes_diff / time_diff
-                                speed_kbps = speed_bps / 1024
-
-                                self.speed_updated.emit(self.work_id, speed_kbps)
-                                self.last_update_time = current_time
-                                self.last_downloaded = total_downloaded
-
-            except requests.exceptions.RequestException as e:
-                self.download_error.emit(self.work_id, f"下载文件 {filename} 失败: {str(e)}")
-                return
-            except Exception as e:
-                self.download_error.emit(self.work_id, f"保存文件 {filename} 失败: {str(e)}")
-                return
+            # 记录下载前的总量，用于计算当前文件的贡献
+            total_before_file = total_downloaded - file_downloaded if file_downloaded > 0 else total_downloaded
+            
+            # 尝试下载文件，如果速度过慢会重试
+            download_success, new_file_downloaded = self.download_file_with_speed_monitor(
+                download_url, file_path, file_downloaded, filename, 
+                actual_total_size, total_before_file, proxy_url
+            )
+            
+            if not download_success:
+                return  # 下载失败，停止整个下载过程
+            
+            # 更新总下载量
+            total_downloaded = total_before_file + new_file_downloaded
 
         if not self.is_cancelled:
             # 使用实际下载的总大小
@@ -257,6 +241,138 @@ class DownloadThread(QThread):
     def cancel_download(self):
         self.is_cancelled = True
         self.quit()
+
+    def download_file_with_speed_monitor(self, download_url, file_path, initial_downloaded, filename, actual_total_size, total_downloaded_before, proxy_url):
+        """下载单个文件，包含速度监控和重试逻辑"""
+        max_retries = 3  # 最大重试次数
+        retry_count = 0
+        file_downloaded = initial_downloaded
+        
+        while retry_count <= max_retries:
+            try:
+                # 重置速度监控状态
+                self.speed_check_start_time = time.time()
+                self.last_speed_check_time = time.time()
+                file_start_time = time.time()
+                file_start_downloaded = file_downloaded
+                
+                headers = {}
+                if file_downloaded > 0:
+                    headers['Range'] = f'bytes={file_downloaded}-'
+                    print(f"断点续传: {filename}, 从 {file_downloaded} 字节开始")
+
+                print(f"开始下载文件: {filename} (尝试 {retry_count + 1}/{max_retries + 1})")
+                response = requests.get(download_url, headers=headers, stream=True, 
+                                      proxies=proxy_url, timeout=self.request_timeout)
+                response.raise_for_status()
+                
+                with open(file_path, 'ab' if file_downloaded > 0 else 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if self.is_cancelled:
+                            return False, file_downloaded
+
+                        while self.is_paused and not self.is_cancelled:
+                            time.sleep(0.1)
+
+                        if chunk:
+                            chunk_size = len(chunk)
+
+                            # 使用令牌桶算法进行速度限制
+                            self.consume_tokens(chunk_size)
+
+                            f.write(chunk)
+                            file_downloaded += chunk_size
+                            current_total_downloaded = total_downloaded_before + (file_downloaded - initial_downloaded)
+
+                            # 更新进度
+                            progress = min(int((current_total_downloaded / actual_total_size) * 100), 100) if actual_total_size > 0 else 0
+                            self.progress_updated.emit(progress, current_total_downloaded, actual_total_size, "下载中...")
+
+                            # 计算并发送速度更新
+                            current_time = time.time()
+                            time_diff = current_time - self.last_update_time
+
+                            if time_diff >= 0.5:  # 每0.5秒更新一次速度
+                                bytes_diff = current_total_downloaded - self.last_downloaded
+                                speed_bps = bytes_diff / time_diff
+                                speed_kbps = speed_bps / 1024
+
+                                self.speed_updated.emit(self.work_id, speed_kbps)
+                                self.last_update_time = current_time
+                                self.last_downloaded = current_total_downloaded
+
+                            # 检查下载速度
+                            file_elapsed = current_time - file_start_time
+                            if file_elapsed >= self.min_speed_check_interval:  # 检查间隔后开始监控
+                                file_downloaded_in_period = file_downloaded - file_start_downloaded
+                                file_speed_bps = file_downloaded_in_period / file_elapsed
+                                file_speed_kbps = file_speed_bps / 1024
+                                
+                                if file_speed_kbps < self.min_speed_kbps:
+                                    print(f"文件 {filename} 速度过慢 ({file_speed_kbps:.2f} KB/s < {self.min_speed_kbps} KB/s)，重新下载")
+                                    response.close()  # 关闭当前连接
+                                    raise SpeedTooSlowException(f"速度过慢: {file_speed_kbps:.2f} KB/s")
+
+                # 文件下载完成
+                print(f"文件下载完成: {filename}")
+                return True, file_downloaded
+                
+            except SpeedTooSlowException as e:
+                print(f"速度监控触发重试: {str(e)}")
+                retry_count += 1
+                if retry_count <= max_retries:
+                    print(f"将在3秒后重试... ({retry_count}/{max_retries})")
+                    time.sleep(3)  # 等待3秒后重试
+                    continue
+                else:
+                    self.download_error.emit(self.work_id, f"文件 {filename} 下载失败: 多次重试后速度仍然过慢")
+                    return False, file_downloaded
+                    
+            except requests.exceptions.RequestException as e:
+                print(f"网络错误: {str(e)}")
+                retry_count += 1
+                if retry_count <= max_retries:
+                    print(f"网络错误，将在5秒后重试... ({retry_count}/{max_retries})")
+                    time.sleep(5)  # 网络错误等待更长时间
+                    continue
+                else:
+                    self.download_error.emit(self.work_id, f"下载文件 {filename} 失败: {str(e)}")
+                    return False, file_downloaded
+                    
+            except Exception as e:
+                print(f"其他错误: {str(e)}")
+                self.download_error.emit(self.work_id, f"保存文件 {filename} 失败: {str(e)}")
+                return False, file_downloaded
+        
+        return False, file_downloaded
+
+    def check_speed_and_retry_if_needed(self, current_time, total_downloaded):
+        """检查下载速度，如果过慢则返回True表示需要重新下载"""
+        if not self.speed_check_enabled:
+            return False
+            
+        # 每隔指定时间检查一次速度
+        if current_time - self.last_speed_check_time >= self.min_speed_check_interval:
+            # 计算当前时间段内的平均速度
+            time_elapsed = current_time - self.speed_check_start_time
+            if time_elapsed > 0:
+                bytes_downloaded_in_period = total_downloaded - (total_downloaded - (total_downloaded * (time_elapsed - self.min_speed_check_interval) / time_elapsed)) if time_elapsed > self.min_speed_check_interval else total_downloaded
+                speed_bps = bytes_downloaded_in_period / time_elapsed
+                speed_kbps = speed_bps / 1024
+                self.current_speed_kbps = speed_kbps
+                
+                print(f"速度检查: 当前速度 {speed_kbps:.2f} KB/s, 最小要求 {self.min_speed_kbps} KB/s")
+                
+                # 如果速度低于最小要求，需要重新下载
+                if speed_kbps < self.min_speed_kbps:
+                    print(f"速度过慢 ({speed_kbps:.2f} KB/s < {self.min_speed_kbps} KB/s)，准备重新下载")
+                    return True
+                    
+            # 重置检查时间
+            self.last_speed_check_time = current_time
+            self.speed_check_start_time = current_time
+            
+        return False
 
     def sanitize_filename(self, filename):
         """清理文件名，移除不合法字符"""
