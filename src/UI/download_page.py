@@ -811,6 +811,7 @@ class DownloadPage(QWidget):
         self.download_items = {}
         self.download_manager = None
         self.is_downloading_active = False  # 跟踪是否有活动下载
+        self.auto_refresh_enabled = True   # 是否启用自动刷新功能
         self.setup_ui()
         self.setup_download_manager()
         self.load_download_list()
@@ -1060,11 +1061,18 @@ class DownloadPage(QWidget):
         if self.download_manager and len(self.download_manager.download_queue) > 0:
             self.status_label.setText(f"{language_manager.get_text('download_completed')}: RJ{work_id}, {language_manager.get_text('continue_next')}")
         else:
-            # 所有下载完成，重置按钮状态
-            self.is_downloading_active = False
-            self.start_all_button.setText(language_manager.get_text('start_download'))
-            self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
-            self.status_label.setText(language_manager.get_text('all_downloads_completed'))
+            # 所有下载完成，检查是否需要自动刷新列表
+            if self.auto_refresh_enabled and self.is_downloading_active:
+                print("所有下载任务完成，开始自动刷新列表...")
+                self.status_label.setText("所有下载完成，正在自动刷新列表...")
+                # 延迟3秒后自动刷新，给用户一些时间看到完成状态
+                QTimer.singleShot(3000, self.auto_refresh_and_continue)
+            else:
+                # 所有下载完成，重置按钮状态
+                self.is_downloading_active = False
+                self.start_all_button.setText(language_manager.get_text('start_download'))
+                self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
+                self.status_label.setText(language_manager.get_text('all_downloads_completed'))
 
     def on_download_failed(self, work_id, error):
         """下载失败"""
@@ -1278,3 +1286,109 @@ class DownloadPage(QWidget):
         
         # 显示对话框
         msg_box.exec()
+
+    def auto_refresh_and_continue(self):
+        """自动刷新列表并继续下载"""
+        print("开始执行自动刷新...")
+        
+        # 禁用刷新按钮，防止用户重复点击
+        self.refresh_button.setEnabled(False)
+        self.status_label.setText("正在获取新的下载列表...")
+        
+        # 创建新的下载列表线程
+        self.auto_list_thread = DownloadListThread()
+        self.auto_list_thread.list_updated.connect(self.on_auto_refresh_completed)
+        self.auto_list_thread.error_occurred.connect(self.on_auto_refresh_failed)
+        self.auto_list_thread.finished.connect(lambda: self.refresh_button.setEnabled(True))
+        self.auto_list_thread.start()
+
+    def on_auto_refresh_completed(self, works_list):
+        """自动刷新完成，更新列表并自动开始下载"""
+        print(f"自动刷新成功，获取到 {len(works_list)} 个新的下载项目")
+        
+        # 清空现有列表
+        self.clear_all_items()
+
+        # 添加新的下载项
+        for work in works_list:
+            self.add_download_item(work)
+
+        self.count_label.setText(f"{language_manager.get_text('total_count')}: {len(works_list)}")
+        
+        if works_list:
+            # 自动开始下载新列表
+            print("自动开始下载新列表...")
+            self.status_label.setText(f"已刷新列表，获取到 {len(works_list)} 个新项目，正在自动开始下载...")
+            
+            # 等待所有详情加载完成后再开始下载
+            QTimer.singleShot(2000, self.auto_start_downloads)
+        else:
+            # 没有新的下载项，停止自动下载
+            print("没有获取到新的下载项目，停止自动下载")
+            self.is_downloading_active = False
+            self.start_all_button.setText(language_manager.get_text('start_download'))
+            self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
+            self.status_label.setText("刷新完成，但没有新的下载项目")
+
+    def on_auto_refresh_failed(self, error_msg):
+        """自动刷新失败"""
+        print(f"自动刷新失败: {error_msg}")
+        
+        # 停止自动下载
+        self.is_downloading_active = False
+        self.start_all_button.setText(language_manager.get_text('start_download'))
+        self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
+        self.status_label.setText(f"自动刷新失败: {error_msg}")
+
+    def auto_start_downloads(self):
+        """自动开始下载"""
+        # 获取所有准备好的下载项
+        ready_items = []
+        for i in range(self.download_layout.count() - 1):  # 排除最后的stretch
+            widget = self.download_layout.itemAt(i).widget()
+            if isinstance(widget, DownloadItemWidget):
+                if (not widget.is_downloading and widget.work_detail):
+                    ready_items.append(widget)
+
+        if ready_items:
+            print(f"开始自动下载 {len(ready_items)} 个项目")
+            
+            # 开始第一个下载
+            first_item = ready_items[0]
+            work_id, work_detail = first_item.start_download()
+            
+            # 添加到下载管理器
+            if self.download_manager and work_id and work_detail:
+                self.download_manager.add_download(int(work_id), work_detail, first_item.work_info)
+                self.download_manager.start_next_download()
+
+            # 将剩余的添加到队列
+            for item in ready_items[1:]:
+                if self.download_manager:
+                    self.download_manager.add_download(int(item.work_info['id']), item.work_detail, item.work_info)
+
+            # 保持下载状态
+            self.status_label.setText(f"自动开始下载 {len(ready_items)} 个新项目")
+        else:
+            print("没有准备好的下载项目")
+            # 等待一下再重试，可能详情还在加载中
+            QTimer.singleShot(2000, self.check_and_retry_auto_start)
+
+    def check_and_retry_auto_start(self):
+        """检查并重试自动开始下载"""
+        ready_items = []
+        for i in range(self.download_layout.count() - 1):
+            widget = self.download_layout.itemAt(i).widget()
+            if isinstance(widget, DownloadItemWidget):
+                if (not widget.is_downloading and widget.work_detail):
+                    ready_items.append(widget)
+
+        if ready_items:
+            self.auto_start_downloads()
+        else:
+            # 最终没有可下载的项目，停止自动下载
+            print("重试后仍没有可下载的项目，停止自动下载")
+            self.is_downloading_active = False
+            self.start_all_button.setText(language_manager.get_text('start_download'))
+            self.start_all_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
+            self.status_label.setText("自动刷新完成，但没有可下载的项目")
