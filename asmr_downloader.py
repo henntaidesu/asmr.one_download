@@ -7,6 +7,7 @@ import sys
 import ctypes
 import os
 
+# pyinstaller --noconsole --onefile asmr_downloader.py
 
 APP_VERSION = "v2.1.3"
 APP_NAME = "ASMR_Downloader"
