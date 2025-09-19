@@ -92,7 +92,7 @@ class DownloadThread(QThread):
         total_downloaded = 0
         for file_info in self.work_detail['files']:
             filename = self.sanitize_filename(file_info['title'])
-            # 获取文件夹路径并创建完整的文件路径
+            # 保持API返回的目录结构，但根目录使用配置的命名方式
             folder_path = file_info.get('folder_path', '')
             if folder_path:
                 # 清理文件夹路径
@@ -102,6 +102,9 @@ class DownloadThread(QThread):
                 file_path = os.path.join(subfolder_dir, filename)
             else:
                 file_path = os.path.join(self.download_dir, filename)
+
+            # 标准化路径
+            file_path = os.path.normpath(file_path)
             
             if os.path.exists(file_path):
                 # 使用os.path.getsize获取实际文件大小，支持大文件
@@ -129,7 +132,7 @@ class DownloadThread(QThread):
             download_url = file_info['download_url']
             filename = self.sanitize_filename(file_info['title'])
             
-            # 获取文件夹路径并创建完整的文件路径
+            # 保持API返回的目录结构，但根目录使用配置的命名方式
             folder_path = file_info.get('folder_path', '')
             if folder_path:
                 # 清理文件夹路径，移除不合法字符
@@ -137,14 +140,18 @@ class DownloadThread(QThread):
                 if clean_folder_path:  # 确保清理后的路径不为空
                     # 创建子文件夹
                     subfolder_dir = os.path.join(self.download_dir, clean_folder_path)
+                    subfolder_dir = os.path.normpath(subfolder_dir)  # 标准化路径
                     os.makedirs(subfolder_dir, exist_ok=True)
                     file_path = os.path.join(subfolder_dir, filename)
+                    file_path = os.path.normpath(file_path)  # 标准化路径
                     print(f"下载文件到子文件夹: {clean_folder_path}/{filename}")
                 else:
                     file_path = os.path.join(self.download_dir, filename)
+                    file_path = os.path.normpath(file_path)  # 标准化路径
                     print(f"文件夹路径无效，下载文件到根目录: {filename}")
             else:
                 file_path = os.path.join(self.download_dir, filename)
+                file_path = os.path.normpath(file_path)  # 标准化路径
                 print(f"下载文件到根目录: {filename}")
 
             # 检查文件是否已存在并完整
@@ -274,46 +281,59 @@ class MultiFileDownloadManager(QThread):
         self.active_downloads = {}
         self.max_concurrent = 1  # 顺序下载，一次只下载一个
 
-    def add_download(self, work_id, work_detail):
+    def add_download(self, work_id, work_detail, work_info=None):
         """添加下载任务到队列"""
-        self.download_queue.append((work_id, work_detail))
+        self.download_queue.append((work_id, work_detail, work_info))
 
-    def get_folder_name(self, work_id, work_detail):
-        """根据配置获取文件夹名称"""
+    def get_folder_name(self, work_id, work_detail, work_info=None):
+        """根据配置获取文件夹名称，与旧方法保持一致"""
         import re
         conf = ReadConf()
         folder_for_name = conf.read_name()
 
-        # 清理标题中的非法字符
-        work_title = work_detail.get('title', f'Work_{work_id}')
-        work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', work_title)
-
-        work_id_int = int(work_id)
+        # 优先使用work_info（与旧方法一致），否则使用work_detail
+        if work_info:
+            work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', work_info['title'])
+            work_id = work_info['id']
+        else:
+            work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', work_detail.get('title', f'Work_{work_id}'))
+            work_id = int(work_id)
 
         if folder_for_name == 'rj_naming':
-            return f'RJ{work_id_int:08d}' if len(str(work_id_int)) > 6 else f'RJ{work_id_int:06d}'
+            folder_name = f'RJ{work_id:08d}' if len(str(work_id)) > 6 else f'RJ{work_id:06d}'
         elif folder_for_name == 'title_naming':
-            return work_title
+            folder_name = work_title
         elif folder_for_name == 'rj_space_title_naming':
-            rj_format = f'RJ{work_id_int:08d}' if len(str(work_id_int)) > 6 else f'RJ{work_id_int:06d}'
-            return f'{rj_format} {work_title}'
+            folder_name = f'RJ{work_id:08d} {work_title}' if len(str(work_id)) > 6 else f'RJ{work_id:06d} {work_title}'
         elif folder_for_name == 'rj_underscore_title_naming':
-            rj_format = f'RJ{work_id_int:08d}' if len(str(work_id_int)) > 6 else f'RJ{work_id_int:06d}'
-            return f'{rj_format}_{work_title}'
+            folder_name = f'RJ{work_id:08d}_{work_title}' if len(str(work_id)) > 6 else f'RJ{work_id:06d}_{work_title}'
         else:
-            # 默认使用标题命名
-            return work_title
+            folder_name = work_title
+
+        return folder_name
 
     def start_next_download(self):
         """开始下一个下载任务"""
         if len(self.active_downloads) >= self.max_concurrent or not self.download_queue:
             return
 
-        work_id, work_detail = self.download_queue.pop(0)
+        # 处理新的参数格式
+        queue_item = self.download_queue.pop(0)
+        if len(queue_item) == 3:
+            work_id, work_detail, work_info = queue_item
+        else:
+            work_id, work_detail = queue_item
+            work_info = None
 
         # 根据配置的文件夹命名方式创建作品目录
-        folder_name = self.get_folder_name(work_id, work_detail)
+        folder_name = self.get_folder_name(work_id, work_detail, work_info)
+        print(f"生成的文件夹名: '{folder_name}'")
         work_dir = os.path.join(self.download_dir, folder_name)
+        print(f"完整路径: '{work_dir}'")
+
+        # 标准化路径并创建目录
+        work_dir = os.path.normpath(work_dir)
+        print(f"标准化后路径: '{work_dir}'")
         os.makedirs(work_dir, exist_ok=True)
 
         download_thread = DownloadThread(work_id, work_detail, work_dir)

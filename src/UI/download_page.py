@@ -689,13 +689,15 @@ class DownloadPage(QWidget):
             
             # 添加到下载管理器
             if self.download_manager and work_id and work_detail:
-                self.download_manager.add_download(int(work_id), work_detail)
+                # 找到对应的work_info
+                first_item = ready_items[0]
+                self.download_manager.add_download(int(work_id), work_detail, first_item.work_info)
                 self.download_manager.start_next_download()
 
             # 将剩余的添加到队列
             for item in ready_items[1:]:
                 if self.download_manager:
-                    self.download_manager.add_download(int(item.work_info['id']), item.work_detail)
+                    self.download_manager.add_download(int(item.work_info['id']), item.work_detail, item.work_info)
 
             # 更新状态
             self.is_downloading_active = True
