@@ -181,7 +181,7 @@ class SetConfig(QMainWindow):
 
         # 设置下载路径按钮
         self.path_conf_save_button = QPushButton(language_manager.get_text('select'), self.centralwidget)
-        self.path_conf_save_button.setGeometry(QtCore.QRect(360, 35, 60, 30))
+        self.path_conf_save_button.setGeometry(QtCore.QRect(365, 35, 80, 30))
         self.path_conf_save_button.clicked.connect(self.save_download_path)
 
         # 登录按钮
