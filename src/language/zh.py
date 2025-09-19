@@ -76,7 +76,7 @@ TRANSLATIONS = {
     # 设置页面相关
     "download_path_settings": "下载路径设置:",
     "network_settings": "网络设置:",
-    "download_speed_limit": "下载限速:",
+    "download_speed_limit": "下载速度限制:",
     "user_login": "用户登录:",
     "download_settings": "下载设置:",
     "retry_count": "重试次数:",

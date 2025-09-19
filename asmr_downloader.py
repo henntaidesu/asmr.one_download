@@ -7,7 +7,7 @@ import ctypes
 
 
 # pyinstaller --noconsole --onefile asmr_downloader.py
-
+# v2.1.2
 
 def create_emoji_icon(emoji, size=64):
     """创建基于emoji的图标"""
