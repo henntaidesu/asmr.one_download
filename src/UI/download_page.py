@@ -641,7 +641,7 @@ class DownloadItemWidget(QWidget):
         """计算已下载的文件大小"""
         if not self.work_detail:
             return 0
-            
+
         downloaded_size = 0
         from src.read_conf import ReadConf
         conf = ReadConf()
@@ -927,6 +927,14 @@ class DownloadPage(QWidget):
         self.download_manager.file_filter_stats.connect(self.on_file_filter_stats)
 
         self.download_manager.start()
+
+    def update_download_path(self):
+        """动态更新下载路径，无需重启程序"""
+        if self.download_manager:
+            download_conf = self.conf.read_download_conf()
+            new_download_dir = download_conf['download_path']
+            self.download_manager.update_download_dir(new_download_dir)
+            print(f"下载路径已更新为: {new_download_dir}")
 
     def load_download_list(self):
         self.status_label.setText(language_manager.get_text('loading'))
@@ -1220,6 +1228,8 @@ class DownloadPage(QWidget):
         from src.UI.set_config import SetConfig
         if not hasattr(self, 'settings_page') or not self.settings_page:
             self.settings_page = SetConfig()
+            # 连接下载路径更改信号
+            self.settings_page.download_path_changed.connect(self.update_download_path)
         self.settings_page.show()
         self.settings_page.raise_()
         self.settings_page.activateWindow()

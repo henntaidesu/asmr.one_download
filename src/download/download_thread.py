@@ -312,6 +312,14 @@ class MultiFileDownloadManager(QThread):
         self.active_downloads = {}
         self.max_concurrent = 1  # 顺序下载，一次只下载一个
 
+    def update_download_dir(self, new_download_dir):
+        """动态更新下载目录"""
+        self.download_dir = new_download_dir
+        # 确保新目录存在
+        if not os.path.exists(new_download_dir):
+            os.makedirs(new_download_dir, exist_ok=True)
+            print(f"创建新的下载目录: {new_download_dir}")
+
     def add_download(self, work_id, work_detail, work_info=None):
         """添加下载任务到队列"""
         self.download_queue.append((work_id, work_detail, work_info))

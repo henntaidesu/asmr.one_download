@@ -70,6 +70,9 @@ class LoginThread(QThread):
 
 
 class SetConfig(QMainWindow):
+    # 添加信号，当下载路径更改时发出
+    download_path_changed = pyqtSignal()
+
     def __init__(self):
         super().__init__()
 
@@ -438,6 +441,9 @@ class SetConfig(QMainWindow):
             self.down_path.setText(download_path)
             speed_limit = self.speed_limit.text()
             self.conf.write_download_conf(speed_limit, download_path)
+            # 发出下载路径更改信号
+            self.download_path_changed.emit()
+            print(f"下载路径配置已更新为: {download_path}")
 
     def save_user(self):
         user_name = self.user_name.text()
