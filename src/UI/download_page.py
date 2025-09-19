@@ -98,6 +98,24 @@ class DownloadItemWidget(QWidget):
 
         layout.addLayout(bottom_layout)
 
+        # 文件目录展示区域（初始隐藏）
+        self.file_tree_widget = QWidget()
+        self.file_tree_widget.setVisible(False)
+        self.file_tree_widget.setStyleSheet("""
+            QWidget {
+                background-color: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 4px;
+                margin: 5px 0px;
+            }
+        """)
+
+        self.file_tree_layout = QVBoxLayout()
+        self.file_tree_layout.setContentsMargins(10, 10, 10, 10)
+        self.file_tree_widget.setLayout(self.file_tree_layout)
+
+        layout.addWidget(self.file_tree_widget)
+
         # 分割线
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
@@ -105,7 +123,125 @@ class DownloadItemWidget(QWidget):
         line.setStyleSheet("color: #ddd;")
         layout.addWidget(line)
 
+        # 添加点击事件处理
+        self.is_expanded = False
+        self.installEventFilter(self)
+
         self.setLayout(layout)
+
+    def eventFilter(self, obj, event):
+        """处理点击事件"""
+        from PyQt6.QtCore import QEvent
+        from PyQt6.QtGui import QMouseEvent
+        from PyQt6.QtCore import Qt
+
+        if obj == self and event.type() == QEvent.Type.MouseButtonPress:
+            if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
+                self.toggle_file_tree()
+                return True
+        return super().eventFilter(obj, event)
+
+    def toggle_file_tree(self):
+        """切换文件目录显示状态"""
+        if not self.work_detail:
+            return
+
+        self.is_expanded = not self.is_expanded
+
+        if self.is_expanded:
+            self.build_file_tree()
+            self.file_tree_widget.setVisible(True)
+        else:
+            self.file_tree_widget.setVisible(False)
+
+    def build_file_tree(self):
+        """构建文件目录树"""
+        # 清除现有内容
+        for i in reversed(range(self.file_tree_layout.count())):
+            child = self.file_tree_layout.itemAt(i).widget()
+            if child:
+                child.setParent(None)
+
+        if not self.work_detail or 'files' not in self.work_detail:
+            return
+
+        # 获取文件类型配置
+        from src.read_conf import ReadConf
+        conf = ReadConf()
+        selected_formats = conf.read_downfile_type()
+
+        # 构建目录结构
+        file_tree = {}
+        for file_info in self.work_detail['files']:
+            file_title = file_info['title']
+            folder_path = file_info.get('folder_path', '')
+
+            # 判断文件是否会被跳过
+            file_type = file_title[file_title.rfind('.') + 1:].upper()
+            is_skipped = not selected_formats.get(file_type, False)
+
+            # 处理文件夹路径
+            if folder_path:
+                # 分割路径，创建嵌套结构
+                path_parts = folder_path.strip('/').split('/')
+                current_tree = file_tree
+
+                # 创建文件夹结构
+                for part in path_parts:
+                    if part not in current_tree:
+                        current_tree[part] = {'type': 'folder', 'children': {}}
+                    current_tree = current_tree[part]['children']
+
+                # 添加文件到相应文件夹
+                current_tree[file_title] = {
+                    'type': 'file',
+                    'size': file_info.get('size', 0),
+                    'skipped': is_skipped
+                }
+            else:
+                # 根目录文件
+                file_tree[file_title] = {
+                    'type': 'file',
+                    'size': file_info.get('size', 0),
+                    'skipped': is_skipped
+                }
+
+        # 显示文件树
+        self._display_tree(file_tree, 0)
+
+    def _display_tree(self, tree_dict, indent_level):
+        """递归显示文件树"""
+        for name, item in sorted(tree_dict.items()):
+            # 创建缩进
+            indent_text = "  " * indent_level
+
+            if item['type'] == 'folder':
+                # 文件夹
+                folder_label = QLabel(f"{indent_text}📁 {name}/")
+                folder_label.setStyleSheet("color: #2196F3; font-weight: bold; font-size: 12px;")
+                self.file_tree_layout.addWidget(folder_label)
+
+                # 递归显示子项
+                self._display_tree(item['children'], indent_level + 1)
+            else:
+                # 文件
+                file_size = self.format_bytes(item.get('size', 0))
+                file_text = f"{indent_text}📄 {name} ({file_size})"
+
+                file_label = QLabel(file_text)
+
+                if item.get('skipped', False):
+                    # 跳过的文件使用删除线样式
+                    file_label.setStyleSheet("""
+                        color: #999;
+                        font-size: 11px;
+                        text-decoration: line-through;
+                    """)
+                else:
+                    # 正常下载的文件
+                    file_label.setStyleSheet("color: #333; font-size: 11px;")
+
+                self.file_tree_layout.addWidget(file_label)
 
     def load_work_detail(self):
         """加载作品详细信息"""
