@@ -18,6 +18,33 @@ from src.read_conf import ReadConf
 from src.language.language_manager import language_manager
 
 
+class FocusedScrollArea(QScrollArea):
+    """带有焦点管理的滚动区域"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.WheelFocus)
+
+    def enterEvent(self, event):
+        """鼠标进入时获取焦点"""
+        self.setFocus()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        """鼠标离开时清除焦点"""
+        self.clearFocus()
+        super().leaveEvent(event)
+
+    def wheelEvent(self, event):
+        """处理滚轮事件，只有在有焦点时才处理"""
+        if self.hasFocus():
+            super().wheelEvent(event)
+        else:
+            # 如果没有焦点，将事件传递给父控件
+            if self.parent():
+                self.parent().wheelEvent(event)
+
+
 class TriangleButton(QLabel):
     """可点击的三角形折叠按钮"""
     clicked = pyqtSignal(str)  # 传递folder_path参数
@@ -134,7 +161,7 @@ class DownloadItemWidget(QWidget):
         layout.addLayout(bottom_layout)
 
         # 文件目录展示区域（初始隐藏）
-        self.file_tree_scroll = QScrollArea()
+        self.file_tree_scroll = FocusedScrollArea()
         self.file_tree_scroll.setVisible(False)
         self.file_tree_scroll.setMaximumHeight(250)
         self.file_tree_scroll.setWidgetResizable(True)
