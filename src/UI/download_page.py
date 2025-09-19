@@ -508,6 +508,7 @@ class DownloadPage(QWidget):
         self.download_manager.download_completed.connect(self.on_download_completed)
         self.download_manager.download_failed.connect(self.on_download_failed)
         self.download_manager.speed_updated.connect(self.on_speed_updated)
+        self.download_manager.file_filter_stats.connect(self.on_file_filter_stats)
 
         self.download_manager.start()
 
@@ -652,6 +653,28 @@ class DownloadPage(QWidget):
         if work_id in self.download_items:
             self.download_items[work_id].update_speed(speed_kbps)
         self.update_global_speed()
+
+    def on_file_filter_stats(self, work_id, api_total, actual_total, skipped_total, total_files, skipped_files):
+        """文件筛选统计信息"""
+        def format_size(size):
+            """格式化文件大小"""
+            if size >= 1024**3:
+                return f"{size / (1024**3):.2f} GB"
+            elif size >= 1024**2:
+                return f"{size / (1024**2):.2f} MB"
+            elif size >= 1024:
+                return f"{size / 1024:.2f} KB"
+            else:
+                return f"{size} B"
+
+        # 更新状态标签显示统计信息
+        status_text = f"作品 RJ{work_id}: "
+        status_text += f"总文件 {total_files} 个, "
+        if skipped_files > 0:
+            status_text += f"跳过 {skipped_files} 个({format_size(skipped_total)}), "
+        status_text += f"下载 {total_files - skipped_files} 个({format_size(actual_total)})"
+
+        self.status_label.setText(status_text)
 
     def check_start_all_button(self):
         """检查是否应该启用开始全部下载按钮"""

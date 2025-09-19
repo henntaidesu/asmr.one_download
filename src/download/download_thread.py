@@ -10,6 +10,7 @@ class DownloadThread(QThread):
     download_finished = pyqtSignal(str)  # work_id
     download_error = pyqtSignal(str, str)  # work_id, error_message
     speed_updated = pyqtSignal(str, float)  # work_id, speed_kb_s
+    file_filter_stats = pyqtSignal('PyQt_PyObject', 'PyQt_PyObject', 'PyQt_PyObject', int, int)  # api_total, actual_total, skipped_total, total_files, skipped_files
 
     def __init__(self, work_id, work_detail, download_dir):
         super().__init__()
@@ -85,21 +86,38 @@ class DownloadThread(QThread):
         else:
             proxy_url = None
 
-        # 直接使用API返回的总大小，始终不变
-        total_size = self.work_detail.get('total_size', 0)
-        
-        # 读取文件类型配置，用于计算已下载文件大小
+        # 读取文件类型配置
         conf = ReadConf()
         selected_formats = conf.read_downfile_type()
 
-        # 计算已下载的总大小（包括已存在的文件），支持超大文件
+        # 重新计算实际要下载的文件总大小（排除跳过的文件）
+        actual_total_size = 0
+        skipped_total_size = 0
         total_downloaded = 0
+        total_files = len(self.work_detail['files'])
+        skipped_files = 0
+
         for file_info in self.work_detail['files']:
             # 按照旧方法的逻辑进行文件类型筛选
             file_title = file_info['title']
             file_type = file_title[file_title.rfind('.') + 1:].upper()
+
+            # 获取文件大小
+            file_size = file_info.get('size', 0)
+            if isinstance(file_size, str):
+                try:
+                    file_size = int(file_size)
+                except ValueError:
+                    file_size = 0
+
             if not selected_formats.get(file_type, False):
-                continue  # 跳过不需要的文件类型
+                # 跳过的文件，累计跳过大小和数量
+                skipped_total_size += file_size
+                skipped_files += 1
+                continue
+
+            # 需要下载的文件，累计到实际总大小
+            actual_total_size += file_size
 
             filename = self.sanitize_filename(file_info['title'])
             # 保持API返回的目录结构，但根目录使用配置的命名方式
@@ -115,22 +133,17 @@ class DownloadThread(QThread):
 
             # 标准化路径
             file_path = os.path.normpath(file_path)
-            
+
             if os.path.exists(file_path):
                 # 使用os.path.getsize获取实际文件大小，支持大文件
                 downloaded_size = os.path.getsize(file_path)
-                expected_size = file_info.get('size', 0)
-                # 确保expected_size是数字类型，支持超大数值
-                if isinstance(expected_size, str):
-                    try:
-                        expected_size = int(expected_size)
-                    except ValueError:
-                        expected_size = 0
                 # 确保不超过文件实际大小
-                downloaded_size = min(downloaded_size, expected_size)
+                downloaded_size = min(downloaded_size, file_size)
                 total_downloaded += downloaded_size
 
-        print(f"开始下载: 总大小 {total_size} bytes ({total_size / (1024*1024*1024):.2f} GB), 已下载 {total_downloaded} bytes ({total_downloaded / (1024*1024*1024):.2f} GB)")
+        # 发送文件筛选统计信息到UI
+        api_total_size = self.work_detail.get('total_size', 0)
+        self.file_filter_stats.emit(api_total_size, actual_total_size, skipped_total_size, total_files, skipped_files)
         
         # 不发送初始进度更新，避免覆盖界面已显示的正确大小
 
@@ -206,9 +219,9 @@ class DownloadThread(QThread):
                             file_downloaded += chunk_size
                             total_downloaded += chunk_size
 
-                            # 更新进度（使用API返回的总大小），支持超大文件
-                            progress = min(int((total_downloaded / total_size) * 100), 100) if total_size > 0 else 0
-                            self.progress_updated.emit(progress, total_downloaded, total_size, "下载中...")
+                            # 更新进度（使用实际下载的总大小），支持超大文件
+                            progress = min(int((total_downloaded / actual_total_size) * 100), 100) if actual_total_size > 0 else 0
+                            self.progress_updated.emit(progress, total_downloaded, actual_total_size, "下载中...")
 
                             # 计算并发送速度更新
                             current_time = time.time()
@@ -231,8 +244,8 @@ class DownloadThread(QThread):
                 return
 
         if not self.is_cancelled:
-            # 使用API返回的总大小
-            self.progress_updated.emit(100, total_size, total_size, "下载完成")
+            # 使用实际下载的总大小
+            self.progress_updated.emit(100, actual_total_size, actual_total_size, "下载完成")
             self.download_finished.emit(self.work_id)
 
     def pause_download(self):
@@ -290,6 +303,7 @@ class MultiFileDownloadManager(QThread):
     download_completed = pyqtSignal(str)  # work_id
     download_failed = pyqtSignal(str, str)  # work_id, error
     speed_updated = pyqtSignal(str, float)  # work_id, speed
+    file_filter_stats = pyqtSignal(str, 'PyQt_PyObject', 'PyQt_PyObject', 'PyQt_PyObject', int, int)  # work_id, api_total, actual_total, skipped_total, total_files, skipped_files
 
     def __init__(self, download_dir):
         super().__init__()
@@ -360,6 +374,9 @@ class MultiFileDownloadManager(QThread):
         download_thread.download_finished.connect(self.on_download_finished)
         download_thread.download_error.connect(self.on_download_error)
         download_thread.speed_updated.connect(self.speed_updated.emit)
+        download_thread.file_filter_stats.connect(
+            lambda api, actual, skipped, total_f, skipped_f, wid=work_id: self.file_filter_stats.emit(str(wid), api, actual, skipped, total_f, skipped_f)
+        )
 
         self.active_downloads[str(work_id)] = download_thread
         download_thread.start()
