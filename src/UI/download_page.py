@@ -35,7 +35,7 @@ class WorkDetailThread(QThread):
 class DownloadItemWidget(QWidget):
     detail_ready = pyqtSignal()
 
-    def __init__(self, work_info):
+    def __init__(self, work_info, parent_page=None):
         super().__init__()
         self.work_info = work_info
         self.work_detail = None
@@ -46,6 +46,7 @@ class DownloadItemWidget(QWidget):
         self.total_bytes = 0
         self.last_update_time = time.time()
         self.last_downloaded = 0
+        self.parent_page = parent_page
         self.setup_ui()
         self.load_work_detail()
 
@@ -191,9 +192,32 @@ class DownloadItemWidget(QWidget):
 
         if obj == self and event.type() == QEvent.Type.MouseButtonPress:
             if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
-                self.toggle_file_tree()
+                # 检查点击位置是否在展开区域内
+                click_pos = event.position().toPoint()
+
+                # 如果展开区域可见，检查点击是否在其范围内
+                if self.file_tree_scroll.isVisible():
+                    scroll_geometry = self.file_tree_scroll.geometry()
+                    if scroll_geometry.contains(click_pos):
+                        # 点击在展开区域内，不处理
+                        return False
+
+                # 点击在主区域，处理展开/收起逻辑
+                self.handle_item_click()
                 return True
         return super().eventFilter(obj, event)
+
+    def handle_item_click(self):
+        """处理点击事件，包括收起其他展开项"""
+        if not self.work_detail:
+            return
+
+        # 如果有父页面引用，先收起所有其他展开的项
+        if self.parent_page:
+            self.parent_page.collapse_all_except(self)
+
+        # 切换当前项的展开状态
+        self.toggle_file_tree()
 
     def toggle_file_tree(self):
         """切换文件目录显示状态"""
@@ -207,6 +231,11 @@ class DownloadItemWidget(QWidget):
             self.file_tree_scroll.setVisible(True)
         else:
             self.file_tree_scroll.setVisible(False)
+
+    def collapse_tree(self):
+        """收起文件树"""
+        self.is_expanded = False
+        self.file_tree_scroll.setVisible(False)
 
     def build_file_tree(self):
         """构建文件目录树"""
@@ -297,16 +326,16 @@ class DownloadItemWidget(QWidget):
                 file_label = QLabel(file_text)
 
                 if item.get('skipped', False):
-                    # 跳过的文件使用删除线样式
+                    # 跳过的文件使用浅色和删除线样式
                     file_label.setStyleSheet("""
-                        color: #999;
+                        color: #bbb;
                         font-size: 10px;
                         font-family: 'Courier New', monospace;
                         text-decoration: line-through;
                     """)
                 else:
-                    # 正常下载的文件
-                    file_label.setStyleSheet("color: #333; font-size: 10px; font-family: 'Courier New', monospace;")
+                    # 需要下载的文件使用深色
+                    file_label.setStyleSheet("color: #000; font-size: 10px; font-family: 'Courier New', monospace;")
 
                 self.file_tree_layout.addWidget(file_label)
 
@@ -826,13 +855,19 @@ class DownloadPage(QWidget):
             self.open_settings()
 
     def add_download_item(self, work_info):
-        item_widget = DownloadItemWidget(work_info)
+        item_widget = DownloadItemWidget(work_info, parent_page=self)
         item_widget.detail_ready.connect(self.check_start_all_button)
 
         # 插入到倒数第二个位置（最后一个是stretch）
         self.download_layout.insertWidget(self.download_layout.count() - 1, item_widget)
 
         self.download_items[str(work_info['id'])] = item_widget
+
+    def collapse_all_except(self, exception_widget):
+        """收起所有展开的项，除了指定的项"""
+        for item in self.download_items.values():
+            if item != exception_widget and item.is_expanded:
+                item.collapse_tree()
 
     def clear_all_items(self):
         # 清空所有下载项
