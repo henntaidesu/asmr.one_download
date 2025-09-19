@@ -4,7 +4,7 @@ English language pack
 """
 
 TRANSLATIONS = {
-    "app_title": "ASMR_download_v2.0",
+    "app_title": "ASMR_Downloader_v2.1.3",
     "total_speed": "Total Speed",
     "start_download": "Start Download",
     "stop_download": "Stop Download",

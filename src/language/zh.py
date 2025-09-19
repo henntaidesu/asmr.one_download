@@ -4,7 +4,7 @@
 """
 
 TRANSLATIONS = {
-    "app_title": "ASMR_download_v2.0",
+    "app_title": "ASMR_Downloader_v2.1.3",
     "total_speed": "总速度",
     "start_download": "开始下载",
     "stop_download": "停止下载",
