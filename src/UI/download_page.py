@@ -131,16 +131,16 @@ class DownloadItemWidget(QWidget):
             return
             
         # 检查已下载的文件并计算初始进度
-        total_size = self.work_detail['total_size']
+        actual_total_size = self.calculate_actual_total_size()  # 使用实际下载总大小
         downloaded_size = self.calculate_downloaded_size()
-        
+
         # 计算初始进度
-        initial_progress = int((downloaded_size / total_size) * 100) if total_size > 0 else 0
+        initial_progress = int((downloaded_size / actual_total_size) * 100) if actual_total_size > 0 else 0
         self.progress_bar.setValue(initial_progress)
-        
+
         # 使用统一的format_bytes方法格式化显示
         downloaded_formatted = self.format_bytes(downloaded_size)
-        total_size_formatted = self.format_bytes(total_size)
+        total_size_formatted = self.format_bytes(actual_total_size)
         self.size_label.setText(f"{downloaded_formatted}/{total_size_formatted}")
         
         if initial_progress == 100:
@@ -185,7 +185,7 @@ class DownloadItemWidget(QWidget):
     def update_progress(self, progress, downloaded_bytes=0, total_bytes=0, status="下载中..."):
         self.progress_bar.setValue(progress)
 
-        # 更新下载量信息，但总大小始终使用API返回的原始值
+        # 更新下载量信息，使用实际下载总大小
         if downloaded_bytes >= 0 and self.work_detail:
             # 确保 downloaded_bytes 是数字类型，支持超大数值
             if isinstance(downloaded_bytes, str):
@@ -193,16 +193,21 @@ class DownloadItemWidget(QWidget):
                     downloaded_bytes = int(downloaded_bytes)
                 except ValueError:
                     downloaded_bytes = 0
-            
+
             self.bytes_downloaded = downloaded_bytes
-            
-            # 始终使用API返回的原始总大小，忽略传入的total_bytes
-            original_total_size = self.work_detail['total_size']
-            self.total_bytes = original_total_size
-            
-            # 使用API返回的原始总大小更新显示
+
+            # 使用传入的实际下载总大小，如果没有传入则使用API返回的原始大小
+            if total_bytes > 0:
+                self.total_bytes = total_bytes
+                actual_total_size = total_bytes
+            else:
+                # 如果没有传入total_bytes，说明可能是初始化阶段，使用API原始大小
+                actual_total_size = self.work_detail['total_size']
+                self.total_bytes = actual_total_size
+
+            # 使用实际下载总大小更新显示
             downloaded_formatted = self.format_bytes(downloaded_bytes)
-            total_formatted = self.format_bytes(original_total_size)
+            total_formatted = self.format_bytes(actual_total_size)
             self.size_label.setText(f"{downloaded_formatted}/{total_formatted}")
 
         if not self.is_paused:
@@ -229,6 +234,32 @@ class DownloadItemWidget(QWidget):
         self.speed_label.setText("0 KB/s")
         self.is_downloading = False
 
+    def calculate_actual_total_size(self):
+        """计算实际需要下载的文件总大小（排除跳过的文件）"""
+        if not self.work_detail:
+            return 0
+
+        from src.read_conf import ReadConf
+        conf = ReadConf()
+        selected_formats = conf.read_downfile_type()
+
+        actual_total_size = 0
+        for file_info in self.work_detail['files']:
+            file_title = file_info['title']
+            file_type = file_title[file_title.rfind('.') + 1:].upper()
+            if not selected_formats.get(file_type, False):
+                continue  # 跳过不需要的文件类型
+
+            file_size = file_info.get('size', 0)
+            if isinstance(file_size, str):
+                try:
+                    file_size = int(file_size)
+                except ValueError:
+                    file_size = 0
+            actual_total_size += file_size
+
+        return actual_total_size
+
     def calculate_downloaded_size(self):
         """计算已下载的文件大小"""
         if not self.work_detail:
@@ -238,6 +269,9 @@ class DownloadItemWidget(QWidget):
         from src.read_conf import ReadConf
         conf = ReadConf()
         download_conf = conf.read_download_conf()
+
+        # 读取文件类型配置
+        selected_formats = conf.read_downfile_type()
         download_dir = download_conf['download_path']
         
         # 根据文件夹命名方式获取实际文件夹路径
@@ -262,6 +296,11 @@ class DownloadItemWidget(QWidget):
             if os.path.exists(work_download_dir):
                 for file_info in self.work_detail['files']:
                     file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_info['title'])
+
+                    # 按照旧方法的逻辑进行文件类型筛选
+                    file_type = file_title[file_title.rfind('.') + 1:].upper()
+                    if not selected_formats.get(file_type, False):
+                        continue  # 跳过不需要的文件类型
                     
                     # 获取文件夹路径并创建完整的文件路径
                     folder_path = file_info.get('folder_path', '')
