@@ -101,16 +101,62 @@ class DownloadItemWidget(QWidget):
         # 文件目录展示区域（初始隐藏）
         self.file_tree_scroll = QScrollArea()
         self.file_tree_scroll.setVisible(False)
-        self.file_tree_scroll.setMaximumHeight(100)
+        self.file_tree_scroll.setMaximumHeight(250)
         self.file_tree_scroll.setWidgetResizable(True)
         self.file_tree_scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.file_tree_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.file_tree_scroll.setStyleSheet("""
             QScrollArea {
-                background-color: #ffffff;
+                background-color: #f5f5f5;
                 border: 1px solid #ddd;
                 border-radius: 2px;
                 margin: 2px 0px;
+            }
+            QScrollBar:vertical {
+                background: #e8e8e8;
+                width: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background: #888888;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #888888;
+            }
+            QScrollBar::handle:vertical:pressed {
+                background: #888888;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                border: none;
+                background: none;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: none;
+            }
+            QScrollBar:horizontal {
+                background: #e8e8e8;
+                height: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:horizontal {
+                background: #888888;
+                border-radius: 6px;
+                min-width: 20px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background: #888888;
+            }
+            QScrollBar::handle:horizontal:pressed {
+                background: #888888;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                border: none;
+                background: none;
+            }
+            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+                background: none;
             }
         """)
 
