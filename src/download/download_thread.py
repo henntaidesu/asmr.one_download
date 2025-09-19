@@ -278,6 +278,32 @@ class MultiFileDownloadManager(QThread):
         """添加下载任务到队列"""
         self.download_queue.append((work_id, work_detail))
 
+    def get_folder_name(self, work_id, work_detail):
+        """根据配置获取文件夹名称"""
+        import re
+        conf = ReadConf()
+        folder_for_name = conf.read_name()
+
+        # 清理标题中的非法字符
+        work_title = work_detail.get('title', f'Work_{work_id}')
+        work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', work_title)
+
+        work_id_int = int(work_id)
+
+        if folder_for_name == 'rj_naming':
+            return f'RJ{work_id_int:08d}' if len(str(work_id_int)) > 6 else f'RJ{work_id_int:06d}'
+        elif folder_for_name == 'title_naming':
+            return work_title
+        elif folder_for_name == 'rj_space_title_naming':
+            rj_format = f'RJ{work_id_int:08d}' if len(str(work_id_int)) > 6 else f'RJ{work_id_int:06d}'
+            return f'{rj_format} {work_title}'
+        elif folder_for_name == 'rj_underscore_title_naming':
+            rj_format = f'RJ{work_id_int:08d}' if len(str(work_id_int)) > 6 else f'RJ{work_id_int:06d}'
+            return f'{rj_format}_{work_title}'
+        else:
+            # 默认使用标题命名
+            return work_title
+
     def start_next_download(self):
         """开始下一个下载任务"""
         if len(self.active_downloads) >= self.max_concurrent or not self.download_queue:
@@ -285,8 +311,9 @@ class MultiFileDownloadManager(QThread):
 
         work_id, work_detail = self.download_queue.pop(0)
 
-        # 创建作品目录
-        work_dir = os.path.join(self.download_dir, f"RJ{int(work_id):06d}")
+        # 根据配置的文件夹命名方式创建作品目录
+        folder_name = self.get_folder_name(work_id, work_detail)
+        work_dir = os.path.join(self.download_dir, folder_name)
         os.makedirs(work_dir, exist_ok=True)
 
         download_thread = DownloadThread(work_id, work_detail, work_dir)
