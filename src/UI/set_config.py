@@ -166,12 +166,12 @@ class SetConfig(QMainWindow):
 
         # 第二行：用户名和密码
         self.user_name = QLineEdit(self.centralwidget)
-        self.user_name.setGeometry(QtCore.QRect(10, 185, 140, 30))
+        self.user_name.setGeometry(QtCore.QRect(10, 185, 155, 30))
         self.user_name.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.user_name.setPlaceholderText(language_manager.get_text('user_name'))
 
         self.password = QLineEdit(self.centralwidget)
-        self.password.setGeometry(QtCore.QRect(160, 185, 140, 30))
+        self.password.setGeometry(QtCore.QRect(175, 185, 155, 30))
         self.password.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.password.setPlaceholderText(language_manager.get_text('password'))
 
@@ -182,7 +182,7 @@ class SetConfig(QMainWindow):
 
         # 登录按钮
         self.user_conf_save_button = QPushButton(language_manager.get_text('login'), self.centralwidget)
-        self.user_conf_save_button.setGeometry(QtCore.QRect(350, 185, 70, 30))
+        self.user_conf_save_button.setGeometry(QtCore.QRect(340, 185, 80, 30))
         self.user_conf_save_button.clicked.connect(self.save_user)
 
         # 下载设置区域
