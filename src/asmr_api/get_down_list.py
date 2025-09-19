@@ -41,10 +41,10 @@ def get_down_list():
         response = requests.get(url, headers=headers, proxies=proxy_url)
         
         # 打印调试信息
-        print(f"API请求URL: {url}")
-        print(f"响应状态码: {response.status_code}")
-        print(f"响应头信息: {response.headers}")
-        print(f"API原始响应: {response.text}")
+        # print(f"API请求URL: {url}")
+        # print(f"响应状态码: {response.status_code}")
+        # print(f"响应头信息: {response.headers}")
+        # print(f"API原始响应: {response.text}")
         
         # 检查响应状态码
         if response.status_code == 401:

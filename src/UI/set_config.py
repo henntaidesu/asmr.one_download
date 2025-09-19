@@ -58,7 +58,8 @@ class LoginThread(QThread):
             # 执行登录
             from src.asmr_api.login import login
             result = login()
-            
+            print(f"登录结果: {result}")  # 调试信息
+
             if result is True:
                 self.login_finished.emit(True, "登录成功")
             else:
@@ -475,13 +476,11 @@ class SetConfig(QMainWindow):
         msg.setWindowTitle(message_from)
         msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
         msg.exec()
-        self.down_start_button.setEnabled(True)
-        self.down_list_page_button.setEnabled(True)
 
+        # 恢复所有控件的启用状态
         self.proxy_address.setEnabled(True)
         self.user_name.setEnabled(True)
         self.password.setEnabled(True)
-        # self.speed_limit.setEnabled(True)
         self.max_retries.setEnabled(True)
         self.timeout.setEnabled(True)
         self.proxy_port.setEnabled(True)
