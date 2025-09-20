@@ -787,11 +787,14 @@ class DownloadListThread(QThread):
                     return
             
             # 检查是否是有效的列表数据
-            if isinstance(works_list, list) and works_list:
-                print(f"成功获取到 {len(works_list)} 个下载项目")
+            if isinstance(works_list, list):
+                if works_list:
+                    print(f"成功获取到 {len(works_list)} 个下载项目")
+                else:
+                    print("API返回的works列表为空，但这是有效的响应")
                 self.list_updated.emit(works_list)
             else:
-                error_msg = "API返回空列表或数据格式错误"
+                error_msg = "API返回数据格式错误"
                 print(f"错误: {error_msg}")
                 self.error_occurred.emit("EMPTY_LIST")
         except Exception as e:
@@ -878,10 +881,10 @@ class DownloadPage(QWidget):
         layout.addLayout(top_layout)
 
         # 滚动区域
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # 下载列表容器
         self.download_container = QWidget()
@@ -889,8 +892,8 @@ class DownloadPage(QWidget):
         self.download_layout.setContentsMargins(0, 0, 0, 0)
         self.download_layout.addStretch()
 
-        scroll.setWidget(self.download_container)
-        layout.addWidget(scroll)
+        self.scroll.setWidget(self.download_container)
+        layout.addWidget(self.scroll)
 
         # 底部状态栏
         status_layout = QHBoxLayout()
@@ -950,22 +953,30 @@ class DownloadPage(QWidget):
         self.list_thread.start()
 
     def on_list_updated(self, works_list):
-        # 清空现有列表
+        # 清空现有列表（这已经重置了所有状态）
         self.clear_all_items()
 
         # 添加新的下载项
         for work in works_list:
             self.add_download_item(work)
 
+        # 更新计数和状态
         self.count_label.setText(f"{language_manager.get_text('total_count')}: {len(works_list)}")
-        self.status_label.setText(f"{language_manager.get_text('loaded_items')} {len(works_list)} {language_manager.get_text('download_items')}")
-
-        # 如果有下载项，启用开始全部下载按钮
+        
+        # 根据列表是否为空设置不同的状态信息
         if works_list:
+            self.status_label.setText(f"{language_manager.get_text('loaded_items')} {len(works_list)} {language_manager.get_text('download_items')}")
             self.start_all_button.setEnabled(True)
+        else:
+            # 对于空列表，保持清空状态并显示合适的提示
+            self.status_label.setText(language_manager.get_text('empty_list'))
+            # start_all_button已经在clear_all_items中被禁用了
 
     def on_list_error(self, error_msg):
         print(f"列表获取错误: {error_msg}")
+        
+        # 发生错误时也要清空UI中的现有数据
+        self.clear_all_items()
         
         # 根据错误类型显示对应的多语言提示
         if error_msg == "TOKEN_EXPIRED":
@@ -1026,12 +1037,38 @@ class DownloadPage(QWidget):
                 item.collapse_tree()
 
     def clear_all_items(self):
-        # 清空所有下载项
+        """完全清空所有下载项和UI状态"""
+        # 清空所有下载项widget
         for item_id in list(self.download_items.keys()):
             item = self.download_items[item_id]
             self.download_layout.removeWidget(item)
             item.deleteLater()
             del self.download_items[item_id]
+        
+        # 重置UI状态标签
+        self.count_label.setText(f"{language_manager.get_text('total_count')}: 0")
+        self.status_label.setText(language_manager.get_text('waiting'))
+        
+        # 禁用相关按钮
+        self.start_all_button.setEnabled(False)
+        if hasattr(self, 'stop_all_button'):
+            self.stop_all_button.setEnabled(False)
+        
+        # 确保下载状态被重置
+        self.is_downloading_active = False
+        
+        # 强制刷新布局，确保视觉上完全清空
+        self.download_layout.update()
+        self.download_container.update()
+        self.update()
+        
+        # 重置滚动位置到顶部
+        self.scroll.verticalScrollBar().setValue(0)
+        self.scroll.horizontalScrollBar().setValue(0)
+        
+        # 强制处理所有待处理的Qt事件，确保UI立即更新
+        from PyQt6.QtWidgets import QApplication
+        QApplication.processEvents()
 
     def on_download_started(self, work_id):
         """下载开始"""

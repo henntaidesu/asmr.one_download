@@ -59,7 +59,7 @@ def get_down_list():
         
         # 尝试解析JSON
         req = response.json()
-        print(f"解析后的JSON数据: {req}")
+        # print(f"解析后的JSON数据: {req}")
         
     except requests.exceptions.RequestException as e:
         print(f"网络请求异常: {e}")
