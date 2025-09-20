@@ -11,9 +11,24 @@ from PyQt6.QtGui import QPainter, QPen
 from PyQt6.QtCore import pyqtSignal
 from PyQt6 import QtCore, QtWidgets
 from src.asmr_api.get_down_list import get_down_list
-from src.asmr_api.get_work_detail import get_work_detail
-from src.asmr_api.works_review import review
 from src.download.download_thread import MultiFileDownloadManager
+from src.download.download_utils import (
+    format_bytes, calculate_actual_total_size, calculate_downloaded_size,
+    build_file_tree_structure, check_all_files_skipped,
+    set_initial_collapsed_folders, get_work_folder_name,
+    format_file_size_for_filter_stats, format_rj_number,
+    calculate_initial_progress, format_speed_display,
+    build_file_filter_stats_text, validate_work_detail_for_download,
+    create_download_item_data, calculate_global_speed
+)
+from src.download.download_threads import WorkDetailThread, DownloadListThread
+from src.download.download_manager_utils import (
+    setup_download_manager, update_download_path_if_needed,
+    process_download_completion, get_ready_download_items,
+    start_first_download_and_queue_others, stop_all_downloads,
+    check_download_queue_status, clear_download_items_from_layout,
+    handle_error_types
+)
 from src.read_conf import ReadConf
 from src.language.language_manager import language_manager
 
@@ -77,20 +92,6 @@ class TriangleButton(QLabel):
             pass
 
 
-class WorkDetailThread(QThread):
-    detail_loaded = pyqtSignal(dict)
-    error_occurred = pyqtSignal(str)
-
-    def __init__(self, work_id):
-        super().__init__()
-        self.work_id = work_id
-
-    def run(self):
-        try:
-            detail = get_work_detail(self.work_id)
-            self.detail_loaded.emit(detail)
-        except Exception as e:
-            self.error_occurred.emit(str(e))
 
 
 class DownloadItemWidget(QWidget):
@@ -126,7 +127,7 @@ class DownloadItemWidget(QWidget):
 
         # RJ号
         work_id = self.work_info['id']
-        rj_text = f"RJ{work_id:06d}" if len(str(work_id)) == 6 else f"RJ{work_id:08d}"
+        rj_text = format_rj_number(work_id)
         self.rj_label = QLabel(rj_text)
         self.rj_label.setStyleSheet("color: #666; font-size: 12px;")
         info_layout.addWidget(self.rj_label)
@@ -312,46 +313,8 @@ class DownloadItemWidget(QWidget):
         if not self.work_detail or 'files' not in self.work_detail:
             return
 
-        # 获取文件类型配置
-        from src.read_conf import ReadConf
-        conf = ReadConf()
-        selected_formats = conf.read_downfile_type()
-
-        # 构建目录结构
-        file_tree = {}
-        for file_info in self.work_detail['files']:
-            file_title = file_info['title']
-            folder_path = file_info.get('folder_path', '')
-
-            # 判断文件是否会被跳过
-            file_type = file_title[file_title.rfind('.') + 1:].upper()
-            is_skipped = not selected_formats.get(file_type, False)
-
-            # 处理文件夹路径
-            if folder_path:
-                # 分割路径，创建嵌套结构
-                path_parts = folder_path.strip('/').split('/')
-                current_tree = file_tree
-
-                # 创建文件夹结构
-                for part in path_parts:
-                    if part not in current_tree:
-                        current_tree[part] = {'type': 'folder', 'children': {}}
-                    current_tree = current_tree[part]['children']
-
-                # 添加文件到相应文件夹
-                current_tree[file_title] = {
-                    'type': 'file',
-                    'size': file_info.get('size', 0),
-                    'skipped': is_skipped
-                }
-            else:
-                # 根目录文件
-                file_tree[file_title] = {
-                    'type': 'file',
-                    'size': file_info.get('size', 0),
-                    'skipped': is_skipped
-                }
+        # 使用工具函数构建目录结构
+        file_tree = build_file_tree_structure(self.work_detail)
 
         # 第一次构建时，将所有跳过的文件夹设为折叠状态
         if not hasattr(self, '_initial_collapsed_set'):
@@ -363,13 +326,7 @@ class DownloadItemWidget(QWidget):
 
     def _set_initial_collapsed_folders(self, tree_dict, folder_path):
         """初始化时将所有跳过的文件夹设为折叠状态"""
-        for name, item in tree_dict.items():
-            if item['type'] == 'folder':
-                current_path = f"{folder_path}/{name}" if folder_path else name
-                if self._check_all_files_skipped(item['children']):
-                    self.collapsed_folders.add(current_path)
-                # 递归处理子文件夹
-                self._set_initial_collapsed_folders(item['children'], current_path)
+        set_initial_collapsed_folders(tree_dict, folder_path, self.collapsed_folders)
 
     def _display_tree(self, tree_dict, indent_level=0, prefix="", is_last=True, folder_path=""):
         """递归显示文件树，使用tree命令风格"""
@@ -387,7 +344,7 @@ class DownloadItemWidget(QWidget):
 
             if item['type'] == 'folder':
                 # 检查文件夹内是否所有文件都被跳过
-                all_files_skipped = self._check_all_files_skipped(item['children'])
+                all_files_skipped = check_all_files_skipped(item['children'])
 
                 if all_files_skipped:
                     # 为跳过的文件夹创建带三角形的布局
@@ -446,7 +403,7 @@ class DownloadItemWidget(QWidget):
                     self._display_tree(item['children'], indent_level + 1, next_prefix, is_current_last, current_path)
             else:
                 # 文件
-                file_size = self.format_bytes(item.get('size', 0))
+                file_size = format_bytes(item.get('size', 0))
                 file_text = f"{tree_prefix}{name} ({file_size})"
 
                 file_label = QLabel(file_text)
@@ -465,16 +422,6 @@ class DownloadItemWidget(QWidget):
 
                 self.file_tree_layout.addWidget(file_label)
 
-    def _check_all_files_skipped(self, children_dict):
-        """递归检查文件夹内所有文件是否都被跳过"""
-        for name, item in children_dict.items():
-            if item['type'] == 'file':
-                if not item.get('skipped', False):
-                    return False  # 发现有文件不被跳过
-            elif item['type'] == 'folder':
-                if not self._check_all_files_skipped(item['children']):
-                    return False  # 子文件夹内有文件不被跳过
-        return True  # 所有文件都被跳过
 
     def _toggle_folder(self, folder_path):
         """切换文件夹的折叠状态"""
@@ -509,17 +456,13 @@ class DownloadItemWidget(QWidget):
         if not self.work_detail:
             return
             
-        # 检查已下载的文件并计算初始进度
-        actual_total_size = self.calculate_actual_total_size()  # 使用实际下载总大小
-        downloaded_size = self.calculate_downloaded_size()
-
-        # 计算初始进度
-        initial_progress = int((downloaded_size / actual_total_size) * 100) if actual_total_size > 0 else 0
+        # 使用工具函数计算初始进度
+        initial_progress, downloaded_size, actual_total_size = calculate_initial_progress(self.work_detail, self.work_info)
         self.progress_bar.setValue(initial_progress)
 
-        # 使用统一的format_bytes方法格式化显示
-        downloaded_formatted = self.format_bytes(downloaded_size)
-        total_size_formatted = self.format_bytes(actual_total_size)
+        # 格式化显示
+        downloaded_formatted = format_bytes(downloaded_size)
+        total_size_formatted = format_bytes(actual_total_size)
         self.size_label.setText(f"{downloaded_formatted}/{total_size_formatted}")
         
         if initial_progress == 100:
@@ -536,14 +479,14 @@ class DownloadItemWidget(QWidget):
 
     def start_download(self):
         """开始下载（由全局按钮调用）"""
-        if not self.work_detail:
-            return
+        if not validate_work_detail_for_download(self.work_detail):
+            return None, None
 
         self.is_downloading = True
         self.status_label.setText(language_manager.get_text('downloading'))
         # 重置进度条样式，清除之前的错误状态样式
         self.progress_bar.setStyleSheet("")
-        return str(self.work_info['id']), self.work_detail
+        return create_download_item_data(self.work_info['id'], self.work_detail)
 
     def pause_download(self):
         """暂停下载（由全局按钮调用）"""
@@ -585,8 +528,8 @@ class DownloadItemWidget(QWidget):
                 self.total_bytes = actual_total_size
 
             # 使用实际下载总大小更新显示
-            downloaded_formatted = self.format_bytes(downloaded_bytes)
-            total_formatted = self.format_bytes(actual_total_size)
+            downloaded_formatted = format_bytes(downloaded_bytes)
+            total_formatted = format_bytes(actual_total_size)
             self.size_label.setText(f"{downloaded_formatted}/{total_formatted}")
 
         if not self.is_paused:
@@ -600,10 +543,7 @@ class DownloadItemWidget(QWidget):
     def update_speed(self, speed_kbps):
         """更新下载速度显示"""
         self.download_speed = speed_kbps
-        if speed_kbps >= 1024:
-            self.speed_label.setText(f"{speed_kbps/1024:.2f} MB/s")
-        else:
-            self.speed_label.setText(f"{speed_kbps:.1f} KB/s")
+        self.speed_label.setText(format_speed_display(speed_kbps))
 
     def set_downloading(self):
         self.status_label.setText(language_manager.get_text('downloading'))
@@ -613,127 +553,8 @@ class DownloadItemWidget(QWidget):
         self.speed_label.setText("0 KB/s")
         self.is_downloading = False
 
-    def calculate_actual_total_size(self):
-        """计算实际需要下载的文件总大小（排除跳过的文件）"""
-        if not self.work_detail:
-            return 0
 
-        from src.read_conf import ReadConf
-        conf = ReadConf()
-        selected_formats = conf.read_downfile_type()
 
-        actual_total_size = 0
-        for file_info in self.work_detail['files']:
-            file_title = file_info['title']
-            file_type = file_title[file_title.rfind('.') + 1:].upper()
-            if not selected_formats.get(file_type, False):
-                continue  # 跳过不需要的文件类型
-
-            file_size = file_info.get('size', 0)
-            if isinstance(file_size, str):
-                try:
-                    file_size = int(file_size)
-                except ValueError:
-                    file_size = 0
-            actual_total_size += file_size
-
-        return actual_total_size
-
-    def calculate_downloaded_size(self):
-        """计算已下载的文件大小"""
-        if not self.work_detail:
-            return 0
-
-        downloaded_size = 0
-        from src.read_conf import ReadConf
-        conf = ReadConf()
-        download_conf = conf.read_download_conf()
-
-        # 读取文件类型配置
-        selected_formats = conf.read_downfile_type()
-        download_dir = download_conf['download_path']
-        
-        # 根据文件夹命名方式获取实际文件夹路径
-        folder_for_name = conf.read_name()
-        work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', self.work_info['title'])
-        work_id = self.work_info['id']
-        
-        if folder_for_name == 'rj_naming':
-            folder_name = f'RJ{work_id:06d}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}'
-        elif folder_for_name == 'title_naming':
-            folder_name = work_title
-        elif folder_for_name == 'rj_space_title_naming':
-            folder_name = f'RJ{work_id:06d} {work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d} {work_title}'
-        elif folder_for_name == 'rj_underscore_title_naming':
-            folder_name = f'RJ{work_id:06d}_{work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}_{work_title}'
-        else:
-            folder_name = work_title
-            
-        work_download_dir = os.path.join(download_dir, folder_name)
-        
-        try:
-            if os.path.exists(work_download_dir):
-                for file_info in self.work_detail['files']:
-                    file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_info['title'])
-
-                    # 按照旧方法的逻辑进行文件类型筛选
-                    file_type = file_title[file_title.rfind('.') + 1:].upper()
-                    if not selected_formats.get(file_type, False):
-                        continue  # 跳过不需要的文件类型
-                    
-                    # 获取文件夹路径并创建完整的文件路径
-                    folder_path = file_info.get('folder_path', '')
-                    if folder_path:
-                        # 清理文件夹路径
-                        clean_folder_path = re.sub(r'[<>:"|?*]', '_', folder_path)
-                        clean_folder_path = clean_folder_path.rstrip('. ')
-                        # 替换路径分隔符为本地格式
-                        clean_folder_path = clean_folder_path.replace('/', os.sep)
-                        
-                        file_path = os.path.join(work_download_dir, clean_folder_path, file_title)
-                    else:
-                        file_path = os.path.join(work_download_dir, file_title)
-                    
-                    if os.path.exists(file_path):
-                        # 使用os.path.getsize获取实际文件大小，支持大文件
-                        actual_size = os.path.getsize(file_path)
-                        expected_size = file_info.get('size', 0)
-                        # 确保expected_size是数字类型，支持超大数值
-                        if isinstance(expected_size, str):
-                            try:
-                                expected_size = int(expected_size)
-                            except ValueError:
-                                expected_size = 0
-                        
-                        # 取实际大小和期望大小的最小值，避免超过文件实际大小
-                        downloaded_size += min(actual_size, expected_size)
-        except Exception as e:
-            print(f"计算已下载大小时出错: {e}")
-            return 0
-        
-        return downloaded_size
-
-    def format_bytes(self, bytes_value):
-        """格式化字节数为可读格式，支持超大文件(>100GB)"""
-        # 确保 bytes_value 是数字类型
-        if isinstance(bytes_value, str):
-            try:
-                bytes_value = float(bytes_value)
-            except ValueError:
-                return "0 B"
-        
-        if bytes_value == 0:
-            return "0 B"
-        elif bytes_value >= 1024 * 1024 * 1024 * 1024:  # TB
-            return f"{bytes_value / (1024 * 1024 * 1024 * 1024):.2f} TB"
-        elif bytes_value >= 1024 * 1024 * 1024:  # GB
-            return f"{bytes_value / (1024 * 1024 * 1024):.2f} GB"
-        elif bytes_value >= 1024 * 1024:  # MB
-            return f"{bytes_value / (1024 * 1024):.2f} MB"
-        elif bytes_value >= 1024:  # KB
-            return f"{bytes_value / 1024:.1f} KB"
-        else:
-            return f"{int(bytes_value)} B"
 
     def update_language(self):
         """更新语言显示"""
@@ -759,52 +580,6 @@ class DownloadItemWidget(QWidget):
             self.size_label.setText(language_manager.get_text('loading'))
 
 
-class DownloadListThread(QThread):
-    list_updated = pyqtSignal(list)
-    error_occurred = pyqtSignal(str)
-
-    def __init__(self):
-        super().__init__()
-
-    def run(self):
-        try:
-            print("开始获取下载列表...")
-            works_list = get_down_list()
-            
-            # 检查是否返回了错误标识
-            if isinstance(works_list, str):
-                if works_list == "TOKEN_EXPIRED":
-                    self.error_occurred.emit("TOKEN_EXPIRED")
-                    return
-                elif works_list == "NETWORK_ERROR":
-                    self.error_occurred.emit("NETWORK_ERROR")
-                    return
-                elif works_list == "API_ERROR":
-                    self.error_occurred.emit("API_ERROR")
-                    return
-                elif works_list == "JSON_PARSE_ERROR":
-                    self.error_occurred.emit("JSON_PARSE_ERROR")
-                    return
-            
-            # 检查是否是有效的列表数据
-            if isinstance(works_list, list):
-                if works_list:
-                    print(f"成功获取到 {len(works_list)} 个下载项目")
-                else:
-                    print("API返回的works列表为空，但这是有效的响应")
-                self.list_updated.emit(works_list)
-            else:
-                error_msg = "API返回数据格式错误"
-                print(f"错误: {error_msg}")
-                self.error_occurred.emit("EMPTY_LIST")
-        except Exception as e:
-            error_msg = f"Failed to get download list: {str(e)}"
-            print(f"异常错误: {error_msg}")
-            print(f"异常类型: {type(e).__name__}")
-            import traceback
-            print(f"完整错误堆栈:")
-            traceback.print_exc()
-            self.error_occurred.emit(f"EXCEPTION: {str(e)}")
 
 
 class DownloadPage(QWidget):
@@ -913,16 +688,7 @@ class DownloadPage(QWidget):
 
     def setup_download_manager(self):
         """设置下载管理器"""
-        # 从配置文件获取下载路径，不再默认创建downloads文件夹
-        download_conf = self.conf.read_download_conf()
-        download_dir = download_conf['download_path']
-        
-        # 只在用户指定的下载路径不存在时才创建
-        if not os.path.exists(download_dir):
-            os.makedirs(download_dir, exist_ok=True)
-            print(f"创建用户指定的下载目录: {download_dir}")
-        
-        self.download_manager = MultiFileDownloadManager(download_dir)
+        self.download_manager = setup_download_manager()
 
         # 连接下载管理器信号
         self.download_manager.download_started.connect(self.on_download_started)
@@ -936,11 +702,7 @@ class DownloadPage(QWidget):
 
     def update_download_path(self):
         """动态更新下载路径，无需重启程序"""
-        if self.download_manager:
-            download_conf = self.conf.read_download_conf()
-            new_download_dir = download_conf['download_path']
-            self.download_manager.update_download_dir(new_download_dir)
-            print(f"下载路径已更新为: {new_download_dir}")
+        update_download_path_if_needed(self.download_manager)
 
     def load_download_list(self):
         self.status_label.setText(language_manager.get_text('loading'))
@@ -978,32 +740,11 @@ class DownloadPage(QWidget):
         # 发生错误时也要清空UI中的现有数据
         self.clear_all_items()
         
-        # 根据错误类型显示对应的多语言提示
-        if error_msg == "TOKEN_EXPIRED":
-            title = language_manager.get_text('token_expired')
-            message = language_manager.get_text('token_expired')
-            detail = language_manager.get_text('relogin_required')
-        elif error_msg == "NETWORK_ERROR":
-            title = language_manager.get_text('network_error') 
-            message = language_manager.get_text('network_error')
-            detail = "请检查:\n1. 网络连接是否正常\n2. 代理设置是否正确\n3. 防火墙是否阻止了连接"
-        elif error_msg == "API_ERROR":
-            title = language_manager.get_text('api_error')
-            message = language_manager.get_text('api_error')
-            detail = "请检查:\n1. API服务是否正常\n2. 尝试切换镜像站点\n3. 稍后重试"
-        elif error_msg == "JSON_PARSE_ERROR":
-            title = language_manager.get_text('json_parse_error')
-            message = language_manager.get_text('json_parse_error')
-            detail = "服务器返回了无效的数据格式，请尝试切换镜像站点或稍后重试"
-        elif error_msg == "EMPTY_LIST":
-            title = language_manager.get_text('empty_list')
-            message = language_manager.get_text('empty_list')
-            detail = "可能的原因:\n1. 您的下载列表为空\n2. 筛选条件过于严格\n3. 账号权限不足"
-        else:
-            # 处理其他异常错误
-            title = language_manager.get_text('error')
-            message = "获取下载列表失败"
-            detail = f"详细错误信息:\n{error_msg}\n\n请检查:\n1. 网络连接是否正常\n2. 登录信息是否有效\n3. API服务是否可用\n4. 代理设置是否正确"
+        # 使用工具函数处理错误类型
+        error_info = handle_error_types(error_msg)
+        title = language_manager.get_text(error_info['title'])
+        message = language_manager.get_text(error_info['message'])
+        detail = error_info['detail']
         
         # 更新状态标签
         self.status_label.setText(f"{language_manager.get_text('error')}: {title}")
@@ -1038,12 +779,8 @@ class DownloadPage(QWidget):
 
     def clear_all_items(self):
         """完全清空所有下载项和UI状态"""
-        # 清空所有下载项widget
-        for item_id in list(self.download_items.keys()):
-            item = self.download_items[item_id]
-            self.download_layout.removeWidget(item)
-            item.deleteLater()
-            del self.download_items[item_id]
+        # 使用工具函数清空下载项
+        clear_download_items_from_layout(self.download_layout, self.download_items)
         
         # 重置UI状态标签
         self.count_label.setText(f"{language_manager.get_text('total_count')}: 0")
@@ -1081,21 +818,14 @@ class DownloadPage(QWidget):
 
     def on_download_completed(self, work_id):
         """下载完成"""
-        print(f"下载完成: {work_id}")
+        process_download_completion(work_id)
         if work_id in self.download_items:
             self.download_items[work_id].update_progress(100, 0, 0, language_manager.get_text('completed'))
         self.update_global_speed()
 
-        # 调用review函数更新作品状态
-        try:
-            check_db = self.conf.check_DB()
-            review(int(work_id), check_db)
-            print(f"已更新作品 RJ{work_id} 的状态")
-        except Exception as e:
-            print(f"更新作品状态失败: {str(e)}")
-
         # 检查是否还有等待中的下载任务
-        if self.download_manager and len(self.download_manager.download_queue) > 0:
+        queue_status = check_download_queue_status(self.download_manager)
+        if queue_status == "has_queue":
             self.status_label.setText(f"{language_manager.get_text('download_completed')}: RJ{work_id}, {language_manager.get_text('continue_next')}")
         else:
             # 所有下载完成，检查是否需要自动刷新列表
@@ -1133,24 +863,7 @@ class DownloadPage(QWidget):
 
     def on_file_filter_stats(self, work_id, api_total, actual_total, skipped_total, total_files, skipped_files):
         """文件筛选统计信息"""
-        def format_size(size):
-            """格式化文件大小"""
-            if size >= 1024**3:
-                return f"{size / (1024**3):.2f} GB"
-            elif size >= 1024**2:
-                return f"{size / (1024**2):.2f} MB"
-            elif size >= 1024:
-                return f"{size / 1024:.2f} KB"
-            else:
-                return f"{size} B"
-
-        # 更新状态标签显示统计信息
-        status_text = f"作品 RJ{work_id}: "
-        status_text += f"总文件 {total_files} 个, "
-        if skipped_files > 0:
-            status_text += f"跳过 {skipped_files} 个({format_size(skipped_total)}), "
-        status_text += f"下载 {total_files - skipped_files} 个({format_size(actual_total)})"
-
+        status_text = build_file_filter_stats_text(work_id, total_files, skipped_files, skipped_total, actual_total)
         self.status_label.setText(status_text)
 
     def check_start_all_button(self):
@@ -1174,49 +887,24 @@ class DownloadPage(QWidget):
 
     def start_downloads(self):
         """开始下载"""
-        # 获取所有准备好的下载项，按添加顺序排列
-        ready_items = []
-        for i in range(self.download_layout.count() - 1):  # 排除最后的stretch
-            widget = self.download_layout.itemAt(i).widget()
-            if isinstance(widget, DownloadItemWidget):
-                if (not widget.is_downloading and widget.work_detail):
-                    ready_items.append(widget)
+        # 获取所有准备好的下载项
+        ready_items = get_ready_download_items(self.download_layout, DownloadItemWidget)
 
         if ready_items:
-            # 开始第一个下载
-            first_item = ready_items[0]
-            work_id, work_detail = first_item.start_download()
-            
-            # 添加到下载管理器
-            if self.download_manager and work_id and work_detail:
-                # 找到对应的work_info
-                first_item = ready_items[0]
-                self.download_manager.add_download(int(work_id), work_detail, first_item.work_info)
-                self.download_manager.start_next_download()
-
-            # 将剩余的添加到队列
-            for item in ready_items[1:]:
-                if self.download_manager:
-                    self.download_manager.add_download(int(item.work_info['id']), item.work_detail, item.work_info)
-
-            # 更新状态
-            self.is_downloading_active = True
-            self.start_all_button.setText(language_manager.get_text('stop_download'))
-            self.start_all_button.setStyleSheet("background-color: #f44336; color: white; font-weight: bold;")
-            self.status_label.setText(f"{language_manager.get_text('start_sequential_download')} {len(ready_items)} {language_manager.get_text('tasks')}")
+            # 使用工具函数开始下载
+            if start_first_download_and_queue_others(ready_items, self.download_manager):
+                # 更新状态
+                self.is_downloading_active = True
+                self.start_all_button.setText(language_manager.get_text('stop_download'))
+                self.start_all_button.setStyleSheet("background-color: #f44336; color: white; font-weight: bold;")
+                self.status_label.setText(f"{language_manager.get_text('start_sequential_download')} {len(ready_items)} {language_manager.get_text('tasks')}")
         else:
             self.status_label.setText(language_manager.get_text('no_downloadable_tasks'))
 
     def stop_downloads(self):
         """停止所有下载"""
-        # 停止下载管理器
-        if self.download_manager:
-            # 清空队列
-            self.download_manager.download_queue.clear()
-            
-            # 取消所有活动下载
-            for work_id in list(self.download_manager.active_downloads.keys()):
-                self.download_manager.cancel_download(work_id)
+        # 使用工具函数停止下载
+        stop_all_downloads(self.download_manager, self.download_items)
 
         # 更新所有下载项状态
         for item in self.download_items.values():
@@ -1288,15 +976,9 @@ class DownloadPage(QWidget):
 
     def update_global_speed(self):
         """更新全局下载速度"""
-        total_speed = 0.0
-        for item in self.download_items.values():
-            if item.is_downloading and not item.is_paused:
-                total_speed += item.download_speed
-
-        if total_speed >= 1024:
-            self.global_speed_label.setText(f"{language_manager.get_text('total_speed')}: {total_speed/1024:.2f} {language_manager.get_text('mb_per_second')}")
-        else:
-            self.global_speed_label.setText(f"{language_manager.get_text('total_speed')}: {total_speed:.1f} {language_manager.get_text('kb_per_second')}")
+        total_speed = calculate_global_speed(self.download_items)
+        speed_text = format_speed_display(total_speed)
+        self.global_speed_label.setText(f"{language_manager.get_text('total_speed')}: {speed_text}")
 
     def show_download_error(self, work_id, error_msg):
         """显示下载错误对话框"""
@@ -1380,32 +1062,15 @@ class DownloadPage(QWidget):
     def auto_start_downloads(self):
         """自动开始下载"""
         # 获取所有准备好的下载项
-        ready_items = []
-        for i in range(self.download_layout.count() - 1):  # 排除最后的stretch
-            widget = self.download_layout.itemAt(i).widget()
-            if isinstance(widget, DownloadItemWidget):
-                if (not widget.is_downloading and widget.work_detail):
-                    ready_items.append(widget)
+        ready_items = get_ready_download_items(self.download_layout, DownloadItemWidget)
 
         if ready_items:
             print(f"开始自动下载 {len(ready_items)} 个项目")
             
-            # 开始第一个下载
-            first_item = ready_items[0]
-            work_id, work_detail = first_item.start_download()
-            
-            # 添加到下载管理器
-            if self.download_manager and work_id and work_detail:
-                self.download_manager.add_download(int(work_id), work_detail, first_item.work_info)
-                self.download_manager.start_next_download()
-
-            # 将剩余的添加到队列
-            for item in ready_items[1:]:
-                if self.download_manager:
-                    self.download_manager.add_download(int(item.work_info['id']), item.work_detail, item.work_info)
-
-            # 保持下载状态
-            self.status_label.setText(f"自动开始下载 {len(ready_items)} 个新项目")
+            # 使用工具函数开始下载
+            if start_first_download_and_queue_others(ready_items, self.download_manager):
+                # 保持下载状态
+                self.status_label.setText(f"自动开始下载 {len(ready_items)} 个新项目")
         else:
             print("没有准备好的下载项目")
             # 等待一下再重试，可能详情还在加载中
@@ -1413,12 +1078,7 @@ class DownloadPage(QWidget):
 
     def check_and_retry_auto_start(self):
         """检查并重试自动开始下载"""
-        ready_items = []
-        for i in range(self.download_layout.count() - 1):
-            widget = self.download_layout.itemAt(i).widget()
-            if isinstance(widget, DownloadItemWidget):
-                if (not widget.is_downloading and widget.work_detail):
-                    ready_items.append(widget)
+        ready_items = get_ready_download_items(self.download_layout, DownloadItemWidget)
 
         if ready_items:
             self.auto_start_downloads()
