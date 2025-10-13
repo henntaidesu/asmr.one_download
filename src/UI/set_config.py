@@ -342,8 +342,6 @@ class SetConfig(QMainWindow):
         # self.down_list_page_button.setGeometry(QtCore.QRect(280, 250, 80, 30))
         # self.down_list_page_button.clicked.connect(self.open_download_page)
         # self.down_list_page_button.setEnabled(True)
-
-
         self.set_data()
 
         # 连接语言切换信号
