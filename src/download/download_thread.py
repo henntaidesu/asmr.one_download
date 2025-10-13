@@ -3,6 +3,7 @@ import time
 import requests
 from PyQt6.QtCore import QThread, pyqtSignal
 from src.read_conf import ReadConf
+from src.download.re_title import sanitize_windows_filename, sanitize_folder_path
 
 
 class SpeedTooSlowException(Exception):
@@ -376,67 +377,16 @@ class DownloadThread(QThread):
 
     def sanitize_filename(self, filename):
         """清理文件名，将Windows不支持的字符转换为相似字符"""
-        # 字符映射表：Windows不支持字符 -> 相似的合法字符
-        char_map = {
-            '<': '＜',   # 全角小于号
-            '>': '＞',   # 全角大于号
-            ':': '：',   # 全角冒号
-            '"': '"',   # 中文双引号（或使用 ' 也可以）
-            '/': '／',   # 全角斜杠
-            '\\': '＼',  # 全角反斜杠
-            '|': '｜',   # 全角竖线
-            '?': '？',   # 全角问号
-            '*': '＊'    # 全角星号
-        }
-
-        # 逐个替换字符
-        for old_char, new_char in char_map.items():
-            filename = filename.replace(old_char, new_char)
-
-        # 移除末尾的点和空格
-        filename = filename.rstrip('. ')
+        filename = sanitize_windows_filename(filename)
         # 限制文件名长度
         if len(filename) > 200:
             name, ext = os.path.splitext(filename)
             filename = name[:200-len(ext)] + ext
-        return filename or "unnamed_file"
+        return filename
 
     def sanitize_folder_path(self, folder_path):
         """清理文件夹路径，保留路径分隔符但将不合法字符转换为相似字符"""
-        if not folder_path:
-            return ""
-
-        # 字符映射表：Windows不支持字符 -> 相似的合法字符（路径处理时不转换 / 和 \）
-        char_map = {
-            '<': '＜',   # 全角小于号
-            '>': '＞',   # 全角大于号
-            ':': '：',   # 全角冒号
-            '"': '"',   # 中文双引号
-            '|': '｜',   # 全角竖线
-            '?': '？',   # 全角问号
-            '*': '＊'    # 全角星号
-        }
-
-        # 分割路径为各个部分
-        path_parts = folder_path.split('/')
-        cleaned_parts = []
-
-        for part in path_parts:
-            if part:  # 跳过空字符串
-                cleaned_part = part
-                # 替换不合法字符
-                for old_char, new_char in char_map.items():
-                    cleaned_part = cleaned_part.replace(old_char, new_char)
-
-                cleaned_part = cleaned_part.rstrip('. ')
-                # 限制文件夹名长度
-                if len(cleaned_part) > 100:
-                    cleaned_part = cleaned_part[:100]
-                if cleaned_part:
-                    cleaned_parts.append(cleaned_part)
-
-        # 使用系统相应的路径分隔符连接路径
-        return os.sep.join(cleaned_parts) if cleaned_parts else ""
+        return sanitize_folder_path(folder_path)
 
 
 class MultiFileDownloadManager(QThread):
@@ -469,34 +419,16 @@ class MultiFileDownloadManager(QThread):
 
     def get_folder_name(self, work_id, work_detail, work_info=None):
         """根据配置获取文件夹名称，与旧方法保持一致"""
-        import re
         conf = ReadConf()
         folder_for_name = conf.read_name()
 
-        # 字符映射表：Windows不支持字符 -> 相似的合法字符
-        char_map = {
-            '<': '＜',   # 全角小于号
-            '>': '＞',   # 全角大于号
-            ':': '：',   # 全角冒号
-            '"': '"',   # 中文双引号
-            '/': '／',   # 全角斜杠
-            '\\': '＼',  # 全角反斜杠
-            '|': '｜',   # 全角竖线
-            '?': '？',   # 全角问号
-            '*': '＊'    # 全角星号
-        }
-
         # 优先使用work_info（与旧方法一致），否则使用work_detail
         if work_info:
-            work_title = work_info['title']
+            work_title = sanitize_windows_filename(work_info['title'])
             work_id = work_info['id']
         else:
-            work_title = work_detail.get('title', f'Work_{work_id}')
+            work_title = sanitize_windows_filename(work_detail.get('title', f'Work_{work_id}'))
             work_id = int(work_id)
-
-        # 替换不合法字符
-        for old_char, new_char in char_map.items():
-            work_title = work_title.replace(old_char, new_char)
 
         if folder_for_name == 'rj_naming':
             folder_name = f'RJ{work_id:06d}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}'

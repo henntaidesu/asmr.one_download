@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
 )
 from PyQt6 import QtCore, QtWidgets
-from src.asmr_api.get_asmr_works import get_asmr_downlist_api
+from asmr_api.OLD_get_asmr_works import get_asmr_downlist_api
 from src.read_conf import ReadConf
 from src.language.language_manager import language_manager
 from threading import Event

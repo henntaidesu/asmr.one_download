@@ -6,6 +6,7 @@ from tqdm import tqdm
 # from src.UI.set_config import SetConfig
 from src.read_conf import ReadConf
 from http.client import IncompleteRead
+from src.download.re_title import sanitize_windows_filename
 
 def down_file(url, file_name, stop_event):
     """
@@ -218,7 +219,7 @@ def get_asmr_downlist_api(stop_event):
             download_conf_data = conf.read_download_conf()
             download_path = download_conf_data["download_path"]
             keyword = work["id"]
-            work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', work["title"])
+            work_title = sanitize_windows_filename(work["title"])
 
             # 根据配置调整文件夹命名方式
             if folder_flag == 'rj_naming':
@@ -285,7 +286,7 @@ def get_asmr_downlist_api(stop_event):
                     return True, "用户停止下载"
 
                 file_title = item['title']
-                file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_title)
+                file_title = sanitize_windows_filename(file_title)
                 file_type = file_title[file_title.rfind('.') + 1:].upper()
                 if not selected_formats.get(file_type, False):
                     print(f"跳过文件: {file_title}")

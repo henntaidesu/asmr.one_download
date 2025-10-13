@@ -7,6 +7,7 @@ import os
 import re
 import time
 from src.read_conf import ReadConf
+from src.download.re_title import sanitize_windows_filename
 
 
 def format_bytes(bytes_value):
@@ -73,7 +74,7 @@ def calculate_downloaded_size(work_detail, work_info):
     
     # 根据文件夹命名方式获取实际文件夹路径
     folder_for_name = conf.read_name()
-    work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', work_info['title'])
+    work_title = sanitize_windows_filename(work_info['title'])
     work_id = work_info['id']
     
     if folder_for_name == 'rj_naming':
@@ -92,7 +93,7 @@ def calculate_downloaded_size(work_detail, work_info):
     try:
         if os.path.exists(work_download_dir):
             for file_info in work_detail['files']:
-                file_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', file_info['title'])
+                file_title = sanitize_windows_filename(file_info['title'])
 
                 # 按照旧方法的逻辑进行文件类型筛选
                 file_type = file_title[file_title.rfind('.') + 1:].upper()
@@ -207,7 +208,7 @@ def get_work_folder_name(work_info):
     """根据配置获取作品文件夹名称"""
     conf = ReadConf()
     folder_for_name = conf.read_name()
-    work_title = re.sub(r'[\/\\:\*\?\<\>\|]', '-', work_info['title'])
+    work_title = sanitize_windows_filename(work_info['title'])
     work_id = work_info['id']
     
     if folder_for_name == 'rj_naming':

@@ -9,7 +9,7 @@ import os
 
 # pyinstaller --noconsole --onefile asmr_downloader.py
 
-APP_VERSION = "v2.1.4"
+APP_VERSION = "v2.1.5"
 APP_NAME = "ASMR_Downloader"
 APP_FULL_TITLE = f"{APP_NAME}_{APP_VERSION}"
 START_MODE = "download"
