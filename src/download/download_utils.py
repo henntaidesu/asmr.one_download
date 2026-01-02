@@ -75,16 +75,16 @@ def calculate_downloaded_size(work_detail, work_info):
     # 根据文件夹命名方式获取实际文件夹路径
     folder_for_name = conf.read_name()
     work_title = sanitize_windows_filename(work_info['title'])
-    work_id = work_info['id']
+    rj_number = get_rj_number(work_info)  # 使用 source_id 或生成的 RJ 号
     
     if folder_for_name == 'rj_naming':
-        folder_name = f'RJ{work_id:06d}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}'
+        folder_name = rj_number
     elif folder_for_name == 'title_naming':
         folder_name = work_title
     elif folder_for_name == 'rj_space_title_naming':
-        folder_name = f'RJ{work_id:06d} {work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d} {work_title}'
+        folder_name = f'{rj_number} {work_title}'
     elif folder_for_name == 'rj_underscore_title_naming':
-        folder_name = f'RJ{work_id:06d}_{work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}_{work_title}'
+        folder_name = f'{rj_number}_{work_title}'
     else:
         folder_name = work_title
         
@@ -209,16 +209,16 @@ def get_work_folder_name(work_info):
     conf = ReadConf()
     folder_for_name = conf.read_name()
     work_title = sanitize_windows_filename(work_info['title'])
-    work_id = work_info['id']
+    rj_number = get_rj_number(work_info)  # 使用 source_id 或生成的 RJ 号
     
     if folder_for_name == 'rj_naming':
-        folder_name = f'RJ{work_id:06d}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}'
+        folder_name = rj_number
     elif folder_for_name == 'title_naming':
         folder_name = work_title
     elif folder_for_name == 'rj_space_title_naming':
-        folder_name = f'RJ{work_id:06d} {work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d} {work_title}'
+        folder_name = f'{rj_number} {work_title}'
     elif folder_for_name == 'rj_underscore_title_naming':
-        folder_name = f'RJ{work_id:06d}_{work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}_{work_title}'
+        folder_name = f'{rj_number}_{work_title}'
     else:
         folder_name = work_title
         
@@ -238,7 +238,27 @@ def format_file_size_for_filter_stats(size):
 
 
 def format_rj_number(work_id):
-    """格式化RJ号显示"""
+    """格式化RJ号显示（已废弃，保留用于向后兼容）"""
+    return f"RJ{work_id:06d}" if len(str(work_id)) == 6 else f"RJ{work_id:08d}"
+
+
+def get_rj_number(work_info):
+    """
+    从 work_info 中获取 RJ 号
+    优先使用 source_id 字段，如果没有则使用 id 生成
+    
+    Args:
+        work_info: 作品信息字典，应包含 'source_id' 或 'id' 字段
+    
+    Returns:
+        str: RJ 号字符串，如 "RJ01128508"
+    """
+    # 优先使用 source_id
+    if 'source_id' in work_info and work_info['source_id']:
+        return work_info['source_id']
+    
+    # 如果没有 source_id，使用 id 生成（向后兼容）
+    work_id = work_info.get('id', 0)
     return f"RJ{work_id:06d}" if len(str(work_id)) == 6 else f"RJ{work_id:08d}"
 
 
@@ -289,8 +309,17 @@ def format_speed_display(speed_kbps):
 
 
 def build_file_filter_stats_text(work_id, total_files, skipped_files, skipped_total, actual_total):
-    """构建文件筛选统计信息文本"""
-    status_text = f"作品 RJ{work_id}: "
+    """构建文件筛选统计信息文本
+    
+    注意：work_id 参数可以是数字ID或RJ号字符串
+    """
+    # 如果 work_id 是数字，格式化为 RJ 号；如果已经是字符串（RJ号），直接使用
+    if isinstance(work_id, (int, float)):
+        rj_display = f"RJ{int(work_id):08d}"
+    else:
+        rj_display = work_id
+    
+    status_text = f"作品 {rj_display}: "
     status_text += f"总文件 {total_files} 个, "
     if skipped_files > 0:
         status_text += f"跳过 {skipped_files} 个({format_file_size_for_filter_stats(skipped_total)}), "

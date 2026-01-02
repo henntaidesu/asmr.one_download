@@ -4,6 +4,7 @@ import requests
 from PyQt6.QtCore import QThread, pyqtSignal
 from src.read_conf import ReadConf
 from src.download.re_title import sanitize_windows_filename, sanitize_folder_path
+from src.download.download_utils import get_rj_number
 
 
 class SpeedTooSlowException(Exception):
@@ -425,19 +426,25 @@ class MultiFileDownloadManager(QThread):
         # 优先使用work_info（与旧方法一致），否则使用work_detail
         if work_info:
             work_title = sanitize_windows_filename(work_info['title'])
-            work_id = work_info['id']
+            rj_number = get_rj_number(work_info)  # 使用 source_id 或生成的 RJ 号
         else:
             work_title = sanitize_windows_filename(work_detail.get('title', f'Work_{work_id}'))
-            work_id = int(work_id)
+            # 如果没有 work_info，尝试从 work_detail 获取 source_id
+            if 'source_id' in work_detail and work_detail['source_id']:
+                rj_number = work_detail['source_id']
+            else:
+                # 最后才使用数字ID生成
+                work_id_num = int(work_id)
+                rj_number = f'RJ{work_id_num:06d}' if len(str(work_id_num)) == 6 else f'RJ{work_id_num:08d}'
 
         if folder_for_name == 'rj_naming':
-            folder_name = f'RJ{work_id:06d}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}'
+            folder_name = rj_number
         elif folder_for_name == 'title_naming':
             folder_name = work_title
         elif folder_for_name == 'rj_space_title_naming':
-            folder_name = f'RJ{work_id:06d} {work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d} {work_title}'
+            folder_name = f'{rj_number} {work_title}'
         elif folder_for_name == 'rj_underscore_title_naming':
-            folder_name = f'RJ{work_id:06d}_{work_title}' if len(str(work_id)) == 6 else f'RJ{work_id:08d}_{work_title}'
+            folder_name = f'{rj_number}_{work_title}'
         else:
             folder_name = work_title
 

@@ -825,7 +825,12 @@ class DownloadPage(QWidget):
         # 检查是否还有等待中的下载任务
         queue_status = check_download_queue_status(self.download_manager)
         if queue_status == "has_queue":
-            self.status_label.setText(f"{language_manager.get_text('download_completed')}: RJ{work_id}, {language_manager.get_text('continue_next')}")
+            # 获取 RJ 号用于显示
+            rj_display = work_id
+            if work_id in self.download_items:
+                work_info = self.download_items[work_id].work_info
+                rj_display = work_info.get('source_id', f"RJ{work_id}")
+            self.status_label.setText(f"{language_manager.get_text('download_completed')}: {rj_display}, {language_manager.get_text('continue_next')}")
         else:
             # 所有下载完成，检查是否需要自动刷新列表
             if self.auto_refresh_enabled and self.is_downloading_active:
@@ -983,8 +988,11 @@ class DownloadPage(QWidget):
         """显示下载错误对话框"""
         # 获取作品信息
         work_title = "未知作品"
+        rj_display = work_id
         if work_id in self.download_items:
-            work_title = self.download_items[work_id].work_info.get('title', '未知作品')
+            work_info = self.download_items[work_id].work_info
+            work_title = work_info.get('title', '未知作品')
+            rj_display = work_info.get('source_id', f"RJ{work_id}")
         
         # 创建错误对话框
         msg_box = QMessageBox(self)
@@ -993,14 +1001,14 @@ class DownloadPage(QWidget):
         msg_box.setText(f"{language_manager.get_text('download_failed')}")
         
         # 详细信息
-        detail_text = f"作品: RJ{work_id} - {work_title}\n\n错误信息:\n{error_msg}\n\n下载队列已停止，请检查网络连接或稍后重试。"
+        detail_text = f"作品: {rj_display} - {work_title}\n\n错误信息:\n{error_msg}\n\n下载队列已停止，请检查网络连接或稍后重试。"
         msg_box.setDetailedText(detail_text)
         
         # 设置按钮
         msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         
         # 更新状态标签
-        self.status_label.setText(f"{language_manager.get_text('error')}: RJ{work_id} {language_manager.get_text('download_failed')}")
+        self.status_label.setText(f"{language_manager.get_text('error')}: {rj_display} {language_manager.get_text('download_failed')}")
         
         # 显示对话框
         msg_box.exec()
