@@ -125,9 +125,8 @@ class DownloadItemWidget(QWidget):
         self.title_label.setWordWrap(True)
         info_layout.addWidget(self.title_label, 1)
 
-        # RJ号
-        work_id = self.work_info['id']
-        rj_text = format_rj_number(work_id)
+        # RJ号 - 直接使用接口返回的 source_id
+        rj_text = self.work_info.get('source_id', f"RJ{self.work_info['id']:08d}")
         self.rj_label = QLabel(rj_text)
         self.rj_label.setStyleSheet("color: #666; font-size: 12px;")
         info_layout.addWidget(self.rj_label)

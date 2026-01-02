@@ -7,15 +7,13 @@ import sys
 import ctypes
 import os
 
-# pyinstaller --noconsole --onefile --icon=imge/hp.ico asmr_downloader.py
+# pyinstaller --noconsole --onefile --icon=imge\hp.ico asmr_downloader.py
 
 APP_VERSION = "v2.1.5"
 APP_NAME = "ASMR_Downloader"
 APP_FULL_TITLE = f"{APP_NAME}_{APP_VERSION}"
 START_MODE = "download"
 WINDOW_ICON = "🎧"
-
-
 
 def create_emoji_icon(emoji, size=64):
     """创建基于emoji的图标"""

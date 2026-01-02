@@ -80,6 +80,7 @@ def get_down_list():
                 work_info = {
                     'id': work['id'],
                     'title': work['title'],
+                    'source_id': work.get('source_id', f"RJ{work['id']:08d}"),  # 从接口读取 source_id，如果没有则使用默认格式
                 }
                 id_list.append(work_info)
         else:
