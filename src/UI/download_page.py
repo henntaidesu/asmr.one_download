@@ -867,7 +867,13 @@ class DownloadPage(QWidget):
 
     def on_file_filter_stats(self, work_id, api_total, actual_total, skipped_total, total_files, skipped_files):
         """文件筛选统计信息"""
-        status_text = build_file_filter_stats_text(work_id, total_files, skipped_files, skipped_total, actual_total)
+        # 获取 source_id 用于显示
+        rj_display = work_id
+        if work_id in self.download_items:
+            work_info = self.download_items[work_id].work_info
+            rj_display = work_info.get('source_id', f"RJ{work_id}")
+        
+        status_text = build_file_filter_stats_text(rj_display, total_files, skipped_files, skipped_total, actual_total)
         self.status_label.setText(status_text)
 
     def check_start_all_button(self):
